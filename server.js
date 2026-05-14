@@ -1,5 +1,5 @@
 // ============================================================
-// Robi Backend — sauber, robust, mit korrektem Modell
+// Robi Backend — flache Struktur (alles im Hauptverzeichnis)
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -12,12 +12,12 @@ import 'dotenv/config';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const app  = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Optimiert für Render
 
 // ── API Key check ──────────────────────────────────────────
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error('\n❌  ANTHROPIC_API_KEY fehlt!');
-  console.error('    .env anlegen: ANTHROPIC_API_KEY=sk-ant-...\n');
+  console.error('    Bitte in den Render Environment Variables hinterlegen.\n');
   process.exit(1);
 }
 
@@ -27,9 +27,9 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 app.use(cors({ origin: '*', methods: ['GET','POST','OPTIONS'] }));
 app.use(express.json({ limit: '50kb' }));
 
-// ── Static frontend ────────────────────────────────────────
-const frontendPath = path.resolve(__dirname, '../frontend');
-app.use(express.static(frontendPath, {
+// ── Static frontend (jetzt flach ohne Unterordner) ─────────
+// Wir nutzen direkt __dirname, da index.html neben server.js liegt
+app.use(express.static(__dirname, {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('sw.js'))       res.setHeader('Cache-Control', 'no-cache');
     if (filePath.endsWith('manifest.json')) res.setHeader('Cache-Control', 'no-cache');
@@ -49,8 +49,10 @@ app.use((req, res, next) => {
 
 // ── Rate limit ─────────────────────────────────────────────
 const chatLimiter = rateLimit({
-  windowMs: 60_000, max: 30,
-  standardHeaders: true, legacyHeaders: false,
+  windowMs: 60_000, 
+  max: 30,
+  standardHeaders: true, 
+  legacyHeaders: false,
   message: { error: 'Zu viele Anfragen — kurz warten!' },
 });
 
@@ -99,7 +101,7 @@ function buildPrompt(age, mode, mood) {
 
 // ── /api/health ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, model: 'claude-sonnet-4-6', ts: new Date().toISOString() });
+  res.json({ ok: true, model: 'claude-3-5-sonnet-20240620', ts: new Date().toISOString() });
 });
 
 // ── /api/chat ──────────────────────────────────────────────
@@ -134,9 +136,9 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     console.log(`[chat] age=${safeAge} mode=${safeMode} mood=${safeMood||'-'} msgs=${messages.length}`);
 
     const response = await anthropic.messages.create({
-      model:      'claude-sonnet-4-6',
+      model:      'claude-3-5-sonnet-20240620',
       max_tokens: maxTokens,
-      system:     buildPrompt(safeAge, safeMode, safeMood),
+      system:      buildPrompt(safeAge, safeMode, safeMood),
       messages,
     });
 
@@ -159,10 +161,10 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
 
 // ── SPA fallback ───────────────────────────────────────────
 app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`\n🤖  Robi läuft auf http://localhost:${PORT}`);
-  console.log(`    Health: http://localhost:${PORT}/api/health\n`);
+  console.log(`\n🤖  Robi läuft auf Port ${PORT}`);
+  console.log(`    Health: /api/health\n`);
 });
