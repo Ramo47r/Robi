@@ -159,7 +159,7 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
 
 // ── SPA fallback ───────────────────────────────────────────
 app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
+  res.sendFile(path.join('index.html'));
 });
 
 app.listen(PORT, () => {
