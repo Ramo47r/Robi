@@ -2220,17 +2220,19 @@ async function sendMessage(userText) {
 
   document.getElementById('micBtn').disabled = true;
 
-  try {
+ try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages, mood: currentMood, mode: currentMode, age: currentAge }),
     });
-    const text = await res.text();
-    let data;
-    try { data = JSON.parse(text); }
-    catch (e) { throw new Error('Server-Antwort konnte nicht gelesen werden'); }
-    if (!res.ok) throw new Error(data.error || 'Server-Fehler ' + res.status);
+
+    // Direkt als JSON lesen, das ist sicherer
+    const data = await res.json().catch(() => ({ error: 'Unbekannter Server-Absturz (kein JSON)' }));
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Server-Fehler ' + res.status);
+    }
 
     const reply = data.reply || 'Hmm, mir fällt gerade nichts ein!';
     messages.push({ role: 'assistant', content: reply });
@@ -2241,21 +2243,17 @@ async function sendMessage(userText) {
     awardStar();
 
   } catch (err) {
-    // Show helpful error based on type
-    let msg = 'Hoppla, da ist was schiefgelaufen!';
-    if (err.message && err.message.includes('fetch')) {
-      msg = 'Keine Verbindung zum Server. Ist der Backend-Server gestartet?';
-    } else if (err.message) {
-      msg = err.message;
-    }
-    setBubble(msg);
+    console.error('Detaillierter Fehler:', err);
+    // Wenn das Backend eine Fehlermeldung schickt, zeigen wir sie direkt in Robis Sprechblase an!
+    setBubble(err.message || 'Hoppla, da ist was schiefgelaufen!');
     setHint('Probier es nochmal!');
-    messages.pop();
+    if (messages.length > 0) messages.pop(); // Nur poppen, wenn auch was drin war
   } finally {
-    document.getElementById('micBtn').disabled = false;
+    const mic = document.getElementById('micBtn');
+    if (mic) mic.disabled = false;
   }
-}
-
+} // Achte darauf, dass hier deine Funktion schließt!
+  
 // ════════════════════════════════════════
 // KARAOKE
 // ════════════════════════════════════════
