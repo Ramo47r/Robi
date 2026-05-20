@@ -12,12 +12,11 @@ import 'dotenv/config';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const app  = express();
-const PORT = process.env.PORT || 10000; // Optimiert für Render
+const PORT = process.env.PORT || 10000; 
 
 // ── API Key check ──────────────────────────────────────────
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error('\n❌  ANTHROPIC_API_KEY fehlt!');
-  console.error('    Bitte in den Render Environment Variables hinterlegen.\n');
   process.exit(1);
 }
 
@@ -36,7 +35,7 @@ app.use(express.static(__dirname, {
   }
 }));
 
-// HTTPS redirect (Render / Railway only)
+// HTTPS redirect
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production'
       && req.headers['x-forwarded-proto'] === 'http'
@@ -108,8 +107,9 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
   try {
     const { messages, mood, mode, age } = req.body;
 
-    if (!Array.isArray(messages) || messages.length === 0)
+    if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'Keine Nachrichten.' });
+    }
 
     const safeAge  = ['1-3','4-6','7-9','10-12'].includes(age)  ? age  : '7-9';
     const safeMode = Object.keys(MODE).includes(mode)           ? mode : 'talk';
@@ -120,7 +120,7 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     console.log(`[chat] Modell: Haiku | msgs=${messages.length}`);
 
     const response = await anthropic.messages.create({
-      model:      'claude-3-haiku-20240307', // Zuverlässiges Universalmodell
+      model:      'claude-3-haiku-20240307',
       max_tokens: maxTokens,
       system:      buildPrompt(safeAge, safeMode, safeMood),
       messages,
@@ -129,20 +129,20 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     const reply = response.content[0]?.text?.trim() || 'Hmm, da fällt mir nichts ein!';
     res.json({ reply });
 
-} catch (err) {
-    // Wir schicken JETZT die ungeschönte, echte Fehlermeldung direkt ins Frontend!
+  } catch (err) {
     console.error('[Echter Fehler im Backend]:', err);
-    
-    // Wir packen die echte Nachricht und den Status ins JSONpaket
     res.status(500).json({ 
       error: `Backend-Absturz: [${err.name || 'Fehler'}] - ${err.message || err}` 
     });
   }
+});
 
+// Fallback für SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Server starten
 app.listen(PORT, () => {
   console.log(`\n🤖  Robi läuft auf Port ${PORT}`);
 });
