@@ -101,7 +101,7 @@ function buildPrompt(age, mode, mood) {
 
 // ── /api/health ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, model: 'claude-3-5-sonnet-20240620', ts: new Date().toISOString() });
+  res.json({ ok: true, model: 'claude-3-5-sonnet-latest', ts: new Date().toISOString() });
 });
 
 // ── /api/chat ──────────────────────────────────────────────
@@ -136,7 +136,7 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     console.log(`[chat] age=${safeAge} mode=${safeMode} mood=${safeMood||'-'} msgs=${messages.length}`);
 
     const response = await anthropic.messages.create({
-      model:      'claude-3-5-sonnet-20240620',
+      model:      'claude-3-5-sonnet-latest', // Jetzt aktualisiert auf das neueste Modell
       max_tokens: maxTokens,
       system:      buildPrompt(safeAge, safeMode, safeMood),
       messages,
@@ -148,7 +148,6 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     res.json({ reply });
 
   } catch (err) {
-    // Hier ist die schlaue Änderung: Wir loggen jetzt detailliert für dich im Render-Dashboard!
     console.error('[error] Status:', err.status || 'Kein Status', '| Nachricht:', err.message || err);
     
     const msg =
