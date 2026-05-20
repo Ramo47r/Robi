@@ -129,17 +129,15 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     const reply = response.content[0]?.text?.trim() || 'Hmm, da fällt mir nichts ein!';
     res.json({ reply });
 
-  } catch (err) {
-    console.error('[error]', err.message);
+} catch (err) {
+    // Wir schicken JETZT die ungeschönte, echte Fehlermeldung direkt ins Frontend!
+    console.error('[Echter Fehler im Backend]:', err);
     
-    // Neuer eindeutiger Text, um den Cache-Status zu prüfen
-    const msg = err.status === 404 
-      ? 'Haiku-Modell wird nicht gefunden! API prüfen.' 
-      : `Robi-Fehler: ${err.message}`;
-      
-    res.status(500).json({ error: msg });
+    // Wir packen die echte Nachricht und den Status ins JSONpaket
+    res.status(500).json({ 
+      error: `Backend-Absturz: [${err.name || 'Fehler'}] - ${err.message || err}` 
+    });
   }
-});
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
