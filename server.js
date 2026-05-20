@@ -27,8 +27,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 app.use(cors({ origin: '*', methods: ['GET','POST','OPTIONS'] }));
 app.use(express.json({ limit: '50kb' }));
 
-// ── Static frontend (jetzt flach ohne Unterordner) ─────────
-// Wir nutzen direkt __dirname, da index.html neben server.js liegt
+// ── Static frontend ────────────────────────────────────────
 app.use(express.static(__dirname, {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('sw.js'))       res.setHeader('Cache-Control', 'no-cache');
@@ -109,64 +108,43 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
   try {
     const { messages, mood, mode, age } = req.body;
 
-    // Validate
     if (!Array.isArray(messages) || messages.length === 0)
       return res.status(400).json({ error: 'Keine Nachrichten.' });
-    if (messages.length > 20)
-      return res.status(400).json({ error: 'Zu viele Nachrichten.' });
-
-    for (const m of messages) {
-      if (!m || typeof m.content !== 'string' || !m.content.trim())
-        return res.status(400).json({ error: 'Ungültige Nachricht.' });
-      if (!['user','assistant'].includes(m.role))
-        return res.status(400).json({ error: `Ungültige Rolle: ${m.role}` });
-      if (m.content.length > 500)
-        return res.status(400).json({ error: 'Nachricht zu lang (max 500 Zeichen).' });
-    }
 
     const safeAge  = ['1-3','4-6','7-9','10-12'].includes(age)  ? age  : '7-9';
     const safeMode = Object.keys(MODE).includes(mode)           ? mode : 'talk';
     const safeMood = Object.keys(MOOD).includes(mood)           ? mood : null;
 
-    const maxTokens = safeAge === '1-3' ? 120
-                    : safeAge === '4-6' ? 220
-                    : safeMode === 'stories' ? 600
-                    : safeAge === '10-12' ? 480 : 380;
+    const maxTokens = safeAge === '1-3' ? 120 : safeMode === 'stories' ? 600 : 350;
 
-    console.log(`[chat] age=${safeAge} mode=${safeMode} mood=${safeMood||'-'} msgs=${messages.length}`);
+    console.log(`[chat] Modell: Haiku | msgs=${messages.length}`);
 
     const response = await anthropic.messages.create({
-  model:      'claude-3-haiku-20240307', // <-- Das universelle Haiku-Modell
-  max_tokens: maxTokens,
-  system:      buildPrompt(safeAge, safeMode, safeMood),
-  messages,
-});
+      model:      'claude-3-haiku-20240307', // Zuverlässiges Universalmodell
+      max_tokens: maxTokens,
+      system:      buildPrompt(safeAge, safeMode, safeMood),
+      messages,
+    });
 
     const reply = response.content[0]?.text?.trim() || 'Hmm, da fällt mir nichts ein!';
-    console.log(`[reply] "${reply.slice(0,60)}"`);
-
     res.json({ reply });
 
   } catch (err) {
-    console.error('[error] Status:', err.status || 'Kein Status', '| Nachricht:', err.message || err);
+    console.error('[error]', err.message);
     
-    const msg =
-      err.status === 401 ? 'API-Key ungültig. Bitte prüfen!' :
-     err.status === 404 ? 'Huch! Modell-Fehler 404 bei Anthropic!' :
-      err.status === 429 ? 'Zu viele Anfragen. Kurz warten!' :
-      err.status === 529 ? 'Anthropic überlastet. Gleich nochmal!' :
-      `Robi-Fehler: ${err.message || 'Bitte nochmal versuchen!'}`;
+    // Neuer eindeutiger Text, um den Cache-Status zu prüfen
+    const msg = err.status === 404 
+      ? 'Haiku-Modell wird nicht gefunden! API prüfen.' 
+      : `Robi-Fehler: ${err.message}`;
       
     res.status(500).json({ error: msg });
   }
 });
 
-// ── SPA fallback ───────────────────────────────────────────
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
   console.log(`\n🤖  Robi läuft auf Port ${PORT}`);
-  console.log(`    Health: /api/health\n`);
 });
