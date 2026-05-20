@@ -99,7 +99,7 @@ function buildPrompt(age, mode, mood) {
 
 // ── /api/health ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, model: 'claude-3-haiku-20240307', ts: new Date().toISOString() });
+  res.json({ ok: true, model: 'claude-3-5-haiku-latest', ts: new Date().toISOString() });
 });
 
 // ── /api/chat ──────────────────────────────────────────────
@@ -119,8 +119,8 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
 
     console.log(`[chat] Modell: Haiku | msgs=${messages.length}`);
 
-    const response = await anthropic.messages.create({
-      model:      'claude-3-haiku-20240307',
+  const response = await anthropic.messages.create({
+      model:      'claude-3-5-haiku-latest', // <-- HIER REINSCHREIBEN!
       max_tokens: maxTokens,
       system:      buildPrompt(safeAge, safeMode, safeMood),
       messages,
