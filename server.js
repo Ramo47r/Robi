@@ -101,7 +101,7 @@ function buildPrompt(age, mode, mood) {
 
 // ── /api/health ────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, model: 'claude-3-5-sonnet-latest', ts: new Date().toISOString() });
+  res.json({ ok: true, model: 'claude-3-haiku-20240307', ts: new Date().toISOString() });
 });
 
 // ── /api/chat ──────────────────────────────────────────────
