@@ -136,11 +136,11 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     console.log(`[chat] age=${safeAge} mode=${safeMode} mood=${safeMood||'-'} msgs=${messages.length}`);
 
     const response = await anthropic.messages.create({
-      model:      'claude-3-5-sonnet-latest', // Jetzt aktualisiert auf das neueste Modell
-      max_tokens: maxTokens,
-      system:      buildPrompt(safeAge, safeMode, safeMood),
-      messages,
-    });
+  model:      'claude-3-haiku-20240307', // <-- Das universelle Haiku-Modell
+  max_tokens: maxTokens,
+  system:      buildPrompt(safeAge, safeMode, safeMood),
+  messages,
+});
 
     const reply = response.content[0]?.text?.trim() || 'Hmm, da fällt mir nichts ein!';
     console.log(`[reply] "${reply.slice(0,60)}"`);
