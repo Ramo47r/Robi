@@ -152,7 +152,7 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     
     const msg =
       err.status === 401 ? 'API-Key ungültig. Bitte prüfen!' :
-      err.status === 404 ? 'Modell nicht gefunden. Server updaten!' :
+     err.status === 404 ? 'Huch! Modell-Fehler 404 bei Anthropic!' :
       err.status === 429 ? 'Zu viele Anfragen. Kurz warten!' :
       err.status === 529 ? 'Anthropic überlastet. Gleich nochmal!' :
       `Robi-Fehler: ${err.message || 'Bitte nochmal versuchen!'}`;
