@@ -148,13 +148,16 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     res.json({ reply });
 
   } catch (err) {
-    console.error('[error]', err.status || '', err.message);
+    // Hier ist die schlaue Änderung: Wir loggen jetzt detailliert für dich im Render-Dashboard!
+    console.error('[error] Status:', err.status || 'Kein Status', '| Nachricht:', err.message || err);
+    
     const msg =
       err.status === 401 ? 'API-Key ungültig. Bitte prüfen!' :
       err.status === 404 ? 'Modell nicht gefunden. Server updaten!' :
       err.status === 429 ? 'Zu viele Anfragen. Kurz warten!' :
       err.status === 529 ? 'Anthropic überlastet. Gleich nochmal!' :
-      'Robi schläft kurz — bitte nochmal versuchen!';
+      `Robi-Fehler: ${err.message || 'Bitte nochmal versuchen!'}`;
+      
     res.status(500).json({ error: msg });
   }
 });
