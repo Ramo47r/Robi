@@ -1,10 +1,10 @@
 // ============================================================
-// Robi Backend — flache Struktur (alles im Hauptverzeichnis)
+// Robi Backend — Google Gemini Version (Kostenlos & Stabil)
 // ============================================================
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai'; // Das offizielle, aktuelle Google SDK
 import { fileURLToPath } from 'url';
 import path from 'path';
 import 'dotenv/config';
@@ -14,60 +14,59 @@ const __dirname  = path.dirname(__filename);
 const app  = express();
 const PORT = process.env.PORT || 10000; 
 
-// ── API Key check ──────────────────────────────────────────
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.error('\n❌  ANTHROPIC_API_KEY fehlt!');
+// ── Gemini API Key check ───────────────────────────────────
+if (!process.env.GEMINI_API_KEY) {
+  console.error('\n❌  GEMINI_API_KEY fehlt in den Render-Einstellungen!');
   process.exit(1);
 }
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Initialisierung des Google AI SDKs
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // ── Middleware ─────────────────────────────────────────────
 app.use(cors({ origin: '*', methods: ['GET','POST','OPTIONS'] }));
 app.use(express.json({ limit: '50kb' }));
 
-// ── Static frontend ────────────────────────────────────────
+// ── Statische Dateien (Frontend) ───────────────────────────
 app.use(express.static(__dirname, {
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('sw.js'))       res.setHeader('Cache-Control', 'no-cache');
-    if (filePath.endsWith('manifest.json')) res.setHeader('Cache-Control', 'no-cache');
-    if (filePath.endsWith('.html'))        res.setHeader('Cache-Control', 'no-cache');
+    if (filePath.endsWith('sw.js') || filePath.endsWith('manifest.json') || filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
   }
 }));
 
-// HTTPS redirect
+// HTTPS Umleitung
 app.use((req, res, next) => {
-  if (process.env.NODE_ENV === 'production'
-      && req.headers['x-forwarded-proto'] === 'http'
-      && !req.headers.host?.includes('localhost')) {
+  if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] === 'http' && !req.headers.host?.includes('localhost')) {
     return res.redirect(301, 'https://' + req.headers.host + req.url);
   }
   next();
 });
 
-// ── Rate limit ─────────────────────────────────────────────
+// ── Rate Limit (Spam-Schutz) ────────────────────────────────
 const chatLimiter = rateLimit({
   windowMs: 60_000, 
-  max: 30,
+  max: 45, // Gemini erlaubt mehr Anfragen im Free-Tier
   standardHeaders: true, 
   legacyHeaders: false,
   message: { error: 'Zu viele Anfragen — kurz warten!' },
 });
 
-// ── Prompts ────────────────────────────────────────────────
-const BASE = `Du bist Robi, ein freundlicher Roboter-Freund für Kinder (Deutsch).
+// ── Prompts & Konfiguration ────────────────────────────────
+const BASE_PROMPT = `Du bist Robi, ein freundlicher Roboter-Freund für Kinder (Deutsch).
 Persönlichkeit: warmherzig, geduldig, ermutigend, neugierig, spielerisch.
 Sicherheitsregeln: KEIN Gewalt/Sex/Drogen. Bei ernsten Themen sanft auf Eltern hinweisen.
 Stil: kein Markdown, natürlicher Text (wird vorgelesen), gerne Emojis, Folgefrage stellen.`;
 
-const AGE = {
+const AGE_PROMPTS = {
   '1-3':  `Alter 1-3 (Kleinkind): Sehr kurze Sätze (3-5 Wörter). Tier-Geräusche. Verniedlichungen. Wiederholungen okay.`,
   '4-6':  `Alter 4-6 (Kita): Kurze klare Sätze. Fantasie/Magie. Einfache Erklärungen mit Beispielen.`,
   '7-9':  `Alter 7-9 (Grundschule): Normale Satzlänge. Spannende Fakten. Leichte Witze. Abenteuer.`,
   '10-12':`Alter 10-12 (Pre-Teen): Auf Augenhöhe. Humor okay. Wissenschaft/Pop-Kultur. Kein Baby-Ton.`,
 };
 
-const MODE = {
+const MODE_PROMPTS = {
   talk:     `Modus: Frei reden — sei ein guter Freund, beantworte alles kindgerecht, stelle Folgefragen.`,
   homework: `Modus: Hausaufgaben — erkläre Schritt für Schritt, verrate NIE einfach die Antwort, frage was das Kind schon weiß.`,
   stories:  `Modus: Geschichten — erfinde eine kurze spannende Geschichte zum genannten Thema. Klarer Anfang/Mitte/Ende.`,
@@ -79,70 +78,63 @@ const MODE = {
   wouldYou: `Modus: Würdest du eher? — stelle eine Frage mit 2 Optionen, frage nach dem Warum.`,
 };
 
-const MOOD = {
-  happy:   `Stimmung: GLÜCKLICH — teile die Freude, sei energetisch.`,
-  sad:     `Stimmung: TRAURIG — sei sanft, einfühlsam, höre zuerst zu. Bei ernsten Themen: Eltern erwähnen.`,
-  angry:   `Stimmung: WÜTEND — nimm Wut ernst, höre zu, bleibe neutral.`,
-  scared:  `Stimmung: ÄNGSTLICH — besonders warm, beruhige, kurze Sätze.`,
-  tired:   `Stimmung: MÜDE — langsam, leise, kurze Antworten, ruhige Geschichten anbieten.`,
-  excited: `Stimmung: AUFGEREGT — teile die Energie, viele Folgefragen!`,
-};
-
-function buildPrompt(age, mode, mood) {
-  return [
-    BASE,
-    AGE[age]  || AGE['7-9'],
-    MODE[mode] || MODE['talk'],
-    mood && MOOD[mood] ? MOOD[mood] : '',
-  ].filter(Boolean).join('\n\n');
-}
-
-// ── /api/health ────────────────────────────────────────────
+// ── /api/health (Für den Systemtest) ───────────────────────
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, model: 'claude-3-5-haiku-latest', ts: new Date().toISOString() });
+  res.json({ ok: true, provider: 'google', model: 'gemini-2.5-flash', ts: new Date().toISOString() });
 });
 
-// ── /api/chat ──────────────────────────────────────────────
+// ── /api/chat (Haupt-Schnittstelle) ────────────────────────
 app.post('/api/chat', chatLimiter, async (req, res) => {
   try {
-    const { messages, mood, mode, age } = req.body;
+    const { messages, mode, age } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: 'Keine Nachrichten.' });
+      return res.status(400).json({ error: 'Keine Nachrichten empfangen.' });
     }
 
-    const safeAge  = ['1-3','4-6','7-9','10-12'].includes(age)  ? age  : '7-9';
-    const safeMode = Object.keys(MODE).includes(mode)           ? mode : 'talk';
-    const safeMood = Object.keys(MOOD).includes(mood)           ? mood : null;
+    const safeAge  = ['1-3','4-6','7-9','10-12'].includes(age) ? age : '7-9';
+    const safeMode = Object.keys(MODE_PROMPTS).includes(mode)  ? mode : 'talk';
 
-    const maxTokens = safeAge === '1-3' ? 120 : safeMode === 'stories' ? 600 : 350;
+    // Wir bauen den System-Prompt zusammen
+    const systemInstruction = `${BASE_PROMPT}\n\n${AGE_PROMPTS[safeAge]}\n\n${MODE_PROMPTS[safeMode]}`;
 
-    console.log(`[chat] Modell: Haiku | msgs=${messages.length}`);
+    // Gemini erwartet eine flache Struktur für den Verlauf. 
+    // Das SDK übersetzt die Rollen 'user' und 'assistant' automatisch.
+    const chatContents = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
 
-  const response = await anthropic.messages.create({
-      model:      'claude-3-5-haiku-latest', // <-- HIER REINSCHREIBEN!
-      max_tokens: maxTokens,
-      system:      buildPrompt(safeAge, safeMode, safeMood),
-      messages,
+    console.log(`[Gemini Chat] Modus: ${safeMode} | Alter: ${safeAge}`);
+
+    // API-Aufruf an Google Gemini
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: chatContents,
+      config: {
+        systemInstruction: systemInstruction,
+        maxOutputTokens: safeMode === 'stories' ? 600 : 350,
+        temperature: 0.7,
+      }
     });
 
-    const reply = response.content[0]?.text?.trim() || 'Hmm, da fällt mir nichts ein!';
+    const reply = response.text?.trim() || 'Hmm, da hat meine Schaltung gewackelt. Frag mich nochmal!';
     res.json({ reply });
 
   } catch (err) {
-    console.error('[Echter Fehler im Backend]:', err);
+    console.error('[Gemini Fehler]:', err);
     res.status(500).json({ 
-      error: `Backend-Absturz: [${err.name || 'Fehler'}] - ${err.message || err}` 
+      error: `Gemini-Verbindungsfehler: ${err.message || 'Bitte versuche es gleich noch einmal!'}` 
     });
   }
 });
 
-// Fallback für SPA
+// Fallback für die App
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Server starten
+// Starten
 app.listen(PORT, () => {
-  console.log(`\n🤖  Robi läuft auf Port ${PORT}`);
+  console.log(`\n🤖 Robi läuft stabil mit Google Gemini auf Port ${PORT}\n`);
 });
