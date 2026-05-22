@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Robi – Dein Roboter-Freund 🤖</title>
-<meta name="theme-color" content="#4ec3ff">
+<meta name="theme-color" content="#050a1a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -18,39 +18,29 @@
 html, body { height:100%; overflow:hidden; font-family:'Comic Sans MS', 'Chalkboard SE', -apple-system, BlinkMacSystemFont, sans-serif; }
 
 body {
-  background: linear-gradient(180deg, #4ec3ff 0%, #6bb8ff 30%, #88a8ff 60%, #aa9eff 100%);
-  display: flex; flex-direction: column; align-items: center;
-  height: 100vh; position: relative; overflow: hidden; color: white;
+  background: linear-gradient(180deg, #050a1a 0%, #0a1535 30%, #0d1d4a 60%, #111e50 100%);
+  display: flex; 
+  flex-direction: column; 
+  justify-content: center; /* Zentriert alles perfekt von oben nach unten */
+  align-items: center;     /* Zentriert alles perfekt von links nach rechts */
+  height: 100vh; 
+  min-height: 100vh; 
+  position: relative; 
+  overflow: hidden; 
+  color: white;
 }
 
-/* ── Animated background clouds ── */
-#clouds { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
-.cloud {
-  position:absolute;
-  background: radial-gradient(ellipse, rgba(255,255,255,0.6), rgba(255,255,255,0.2));
-  border-radius: 50%;
-  filter: blur(10px);
-  animation: cloudDrift linear infinite;
+/* Suche nach der Klasse .screen und stelle sicher, dass sie so aussieht: */
+.screen { 
+  display:none; 
+  flex-direction:column; 
+  align-items:center; 
+  width:100%; 
+  max-width:450px; /* Hält die App auf Handys und PC perfekt in Form */
+  height:100%; 
+  padding:0; 
+  margin: 0 auto; 
 }
-@keyframes cloudDrift {
-  from { transform: translateX(-150px); }
-  to   { transform: translateX(calc(100vw + 150px)); }
-}
-
-/* Twinkling stars (also visible on light bg) */
-.star {
-  position:absolute;
-  background: white;
-  border-radius:50%;
-  box-shadow: 0 0 8px rgba(255,255,255,0.8);
-  animation: twinkle linear infinite;
-}
-@keyframes twinkle {
-  0%, 100% { opacity: 0.2; transform: scale(0.8); }
-  50%       { opacity: 1; transform: scale(1.2); }
-}
-
-.screen { display:none; flex-direction:column; align-items:center; width:100%; height:100%; padding:0; }
 .screen.active { display:flex; }
 
 /* ════════════════════════════════════════
@@ -610,7 +600,7 @@ body {
   top: 0; left: 0;
   bottom: 0;
   width: min(280px, 80vw);
-  background: linear-gradient(180deg, #4ec3ff 0%, #6b8eff 100%);
+  background: linear-gradient(180deg, #050a1a 0%, #0d1d4a 100%);
   border-right: 3px solid white;
   z-index: 31;
   transform: translateX(-100%);
@@ -1219,6 +1209,22 @@ body {
   color: rgba(255,255,255,0.3);
   text-decoration: line-through;
   font-size: clamp(12px, 3vw, 14px);
+}
+/* Sterne Hintergrund */
+#clouds {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+}
+.cloud { display: none; }
+.star {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  animation: starTwinkle ease-in-out infinite;
+  box-shadow: 0 0 3px rgba(255,255,255,0.8);
+}
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1.3); }
 }
 
 </style>
@@ -2426,20 +2432,13 @@ function changePin() {
 // CLOUDS + STARS BACKGROUND
 // ════════════════════════════════════════
 const cloudsEl = document.getElementById('clouds');
-// Add some clouds
-for (let i = 0; i < 5; i++) {
-  const c = document.createElement('div');
-  c.className = 'cloud';
-  const w = 100 + Math.random() * 150;
-  c.style.cssText = 'width:' + w + 'px; height:' + (w*0.5) + 'px; top:' + (Math.random()*60) + '%; animation-duration:' + (40 + Math.random()*30) + 's; animation-delay:' + (-Math.random()*30) + 's;';
-  cloudsEl.appendChild(c);
-}
-// Add stars
-for (let i = 0; i < 30; i++) {
+// Sterne im Nachthimmel
+for (let i = 0; i < 120; i++) {
   const s = document.createElement('div');
   s.className = 'star';
-  const z = Math.random() * 2 + 1;
-  s.style.cssText = 'width:' + z + 'px;height:' + z + 'px;left:' + (Math.random()*100) + '%;top:' + (Math.random()*100) + '%;animation-duration:' + (1.8+Math.random()*4) + 's;animation-delay:' + (Math.random()*5) + 's;';
+  const z = Math.random() * 2.5 + 0.8;
+  const brightness = Math.random() > 0.85 ? 1 : 0.6 + Math.random() * 0.4;
+  s.style.cssText = 'width:' + z + 'px;height:' + z + 'px;left:' + (Math.random()*100) + '%;top:' + (Math.random()*100) + '%;opacity:' + brightness + ';animation-duration:' + (2+Math.random()*5) + 's;animation-delay:' + (Math.random()*6) + 's;';
   cloudsEl.appendChild(s);
 }
 
