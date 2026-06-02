@@ -1248,6 +1248,10 @@ function initMain() {
 
 function renderLessonCards() {
   const row = document.getElementById('lessonRow');
+  if (!row) {
+    console.warn('[renderLessonCards] Element lessonRow nicht gefunden!');
+    return;
+  }
   row.innerHTML = '';
   Object.entries(MODES).forEach(([key, m]) => {
     if (parentLocks[key]) return;
@@ -1344,23 +1348,44 @@ function closeMenu() {
 // SPEECH BUBBLE + STAR COUNT
 // ════════════════════════════════════════
 function setBubble(text) {
-  document.getElementById('bubble').textContent = text;
+  const bubble = document.getElementById('bubble');
+  if (bubble) {
+    bubble.textContent = text;
+  } else {
+    console.warn('[setBubble] Element bubble nicht gefunden!');
+  }
 }
 function setBubbleLoading() {
-  document.getElementById('bubble').innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+  const bubble = document.getElementById('bubble');
+  if (bubble) {
+    bubble.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+  } else {
+    console.warn('[setBubbleLoading] Element bubble nicht gefunden!');
+  }
 }
 function setHint(text) {
-  document.getElementById('hint').textContent = text;
+  const hint = document.getElementById('hint');
+  if (hint) {
+    hint.textContent = text;
+  } else {
+    console.warn('[setHint] Element hint nicht gefunden!');
+  }
 }
 
 function updateStarCount() {
-  document.getElementById('starCount').textContent = starCount;
+  const starCountEl = document.getElementById('starCount');
+  if (starCountEl) {
+    starCountEl.textContent = starCount;
+  } else {
+    console.warn('[updateStarCount] Element starCount nicht gefunden!');
+  }
 }
 
 function awardStar() {
   starCount++;
   localStorage.setItem('robi_stars', starCount);
   updateStarCount();
+  console.log('[awardStar] Stern vergeben! Gesamt:', starCount);
 }
 
 function repeatLast() {
