@@ -1561,32 +1561,32 @@ function speak(text) {
   // ────────────────────────────────────────
   // BASIS-WERTE: Warm, natürlich, kinderfreundlich
   // ────────────────────────────────────────
-  // 🎯 OPTIMIERT: Nicht zu pipsig, sondern warm & freundlich
-  let pitch = 1.35;    // ← WÄRMER: 1.35 statt 1.6 (weniger "Roboter-piepsig")
-  let rate = 0.95;     // ← NATÜRLICHER: 0.95 statt 1.15 (verständlicher & weniger gehetzt)
+  // 🎯 OPTIMIERT: Menschlicher, flüssiger, schneller
+  let pitch = 1.25;    // ← NATÜRLICHER: Nicht so hoch, menschlicher klingend
+  let rate = 1.15;     // ← SCHNELLER: 1.15 für flüssigere, natürlichere Rede
 
   // MOOD-Anpassungen
   if (currentMood === 'sad' || currentMood === 'tired') {
-    pitch = 1.15;  // Sanft & mitfühlend
-    rate = 0.80;   // Langsam & beruhigend
+    pitch = 1.10;  // Tiefer & sanft
+    rate = 0.90;   // Langsamer & beruhigend
   } else if (currentMood === 'excited' || currentMood === 'happy') {
-    pitch = 1.55;  // Höher für Freude (aber nicht pipsig)
-    rate = 1.05;   // Schneller für Aufregung (aber nicht gehetzt)
+    pitch = 1.35;  // Höher für Freude (aber natürlich)
+    rate = 1.20;   // Schneller für Aufregung
   }
 
   // KEYWORD-Anpassungen
   if (hasPraise) {
-    pitch = Math.min(1.75, pitch + 0.12);  // Höher für Lob (warmherzig)
-    rate = Math.min(1.15, rate + 0.06);    // Schneller für Begeisterung (aber kontrolliert)
+    pitch = Math.min(1.50, pitch + 0.10);  // Leicht höher für Lob
+    rate = Math.min(1.22, rate + 0.05);    // Schneller für Begeisterung
   }
   if (hasComfort) {
-    pitch = Math.max(1.05, pitch - 0.12);  // Tiefer für Mitgefühl (beruhigend)
-    rate = Math.max(0.75, rate - 0.08);    // Langsamer für Sanftheit
+    pitch = Math.max(1.05, pitch - 0.10);  // Tiefer für Mitgefühl
+    rate = Math.max(0.85, rate - 0.08);    // Langsamer für Sanftheit
   }
 
-  // FRAGEN: Melodischer Anstieg (aber nicht zu extrem)
+  // FRAGEN: Melodischer Anstieg (aber subtil)
   if (isQuestion) {
-    pitch = Math.min(1.7, pitch + 0.15);   // Höher am Ende (freundlich, nicht fragend-unsicher)
+    pitch = Math.min(1.50, pitch + 0.10);   // Leicht höher am Ende (freundlich)
   }
 
   // ────────────────────────────────────────
@@ -1594,13 +1594,13 @@ function speak(text) {
   // ────────────────────────────────────────
   const chunks = [];
   
-  // Teile nur bei SEHR langen Sätzen (>160 Zeichen)
-  if (cleanText.length > 160 && /[.!?]/.test(cleanText)) {
+  // Teile nur bei SEHR langen Sätzen (>250 Zeichen) - weniger Breaks!
+  if (cleanText.length > 250 && /[.!?]/.test(cleanText)) {
     const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
     let currentChunk = '';
     
     sentences.forEach(sent => {
-      if (currentChunk.length + sent.length < 160) {
+      if (currentChunk.length + sent.length < 250) {
         currentChunk += (currentChunk ? ' ' : '') + sent;
       } else {
         if (currentChunk) chunks.push(currentChunk.trim());
@@ -1636,20 +1636,21 @@ function speak(text) {
     
     // ───────────────────────────────────────
     // VOICE SELECTION: Beste deutsche Stimme
-    // 🎯 OPTIMIERT: Warmere, natürlichere Stimmen zuerst
+    // 🎯 OPTIMIERT: Menschlicher & natürlicher
     // ───────────────────────────────────────
     const voices = window.speechSynthesis.getVoices();
     const germanVoices = voices.filter(v => v.lang.toLowerCase().startsWith('de'));
     
-    // 🎯 BEVORZUGTE STIMMEN (Warm & Freundlich):
+    // 🎯 BEVORZUGTE STIMMEN (Menschlich & Natürlich):
     const preferredNames = [
-      'Microsoft Hanna',      // 🥇 Am wärmsten & kinderfreundlichsten!
-      'Microsoft Zira',       // 🥈 Warm & natürlich
-      'Google Deutsch',       // 🥉 Klar & freundlich
-      'Katja Online',         // Modern & warm
+      'Microsoft Clara',       // 🥇 Sehr menschlich & warm!
+      'Microsoft Zira',        // 🥈 Natürlich & freundlich
+      'Google Deutsch',        // 🥉 Klar & verständlich
+      'Katja Online',          // Modern & menschlich
       'Katja',
       'Hedda',
-      'Anna'
+      'Anna',
+      'Hanna'                  // Fallback
     ];
     
     let selectedVoice = germanVoices[0]; // Fallback
@@ -1657,6 +1658,7 @@ function speak(text) {
       const found = germanVoices.find(v => v.name.includes(prefName));
       if (found) {
         selectedVoice = found;
+        console.log('[speak] Nutze Stimme:', found.name);
         break;
       }
     }
@@ -1675,16 +1677,16 @@ function speak(text) {
     utterance.pitch = pitch;
     utterance.rate = rate;
 
-    // Expression je nach Satztyp (aber SUBTIL & WARM)
+    // Expression je nach Satztyp (aber subtil & natürlich)
     let expressionPitch = pitch;
     let expressionRate = rate;
 
     if (isQuestionChunk) {
-      expressionPitch = Math.min(1.75, pitch + 0.12);  // Sanft höher
+      expressionPitch = Math.min(1.50, pitch + 0.08);  // Leicht höher
     }
     if (isExclamationChunk) {
-      expressionPitch = Math.min(1.7, pitch + 0.1);    // Freude (aber warm)
-      expressionRate = Math.min(1.1, rate + 0.05);     // Schneller (aber nicht gehetzt)
+      expressionPitch = Math.min(1.45, pitch + 0.08);    // Freude (natürlich)
+      expressionRate = Math.min(1.25, rate + 0.05);      // Schneller (aber natürlich)
     }
 
     utterance.pitch = expressionPitch;
@@ -1695,8 +1697,8 @@ function speak(text) {
     // ───────────────────────────────────────
     utterance.onend = () => {
       chunkIdx++;
-      // Minimale Pause (nur wenn mehrere Chunks)
-      const pauseMs = chunks.length > 1 && !isLastChunk ? 25 : 0;
+      // Sehr minimale Pause (nur wenn mehrere Chunks) - für fließende Rede
+      const pauseMs = chunks.length > 1 && !isLastChunk ? 8 : 0;
       setTimeout(speakNextChunk, pauseMs);
     };
 
