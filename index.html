@@ -1561,32 +1561,32 @@ function speak(text) {
   // ────────────────────────────────────────
   // BASIS-WERTE: Warm, natürlich, kinderfreundlich
   // ────────────────────────────────────────
-  // 🎯 OPTIMIERT: Menschlicher, flüssiger, schneller
-  let pitch = 1.25;    // ← NATÜRLICHER: Nicht so hoch, menschlicher klingend
-  let rate = 1.15;     // ← SCHNELLER: 1.15 für flüssigere, natürlichere Rede
+  // 🎯 DEUTLICH MENSCHLICHER: Tiefere, natürlichere Stimme
+  let pitch = 1.0;     // ← DEUTLICH TIEFER: 1.0 = Normale Stimme (menschlich!)
+  let rate = 1.2;      // ← SCHNELL & NATÜRLICH: 1.2 für echte menschliche Rede
 
-  // MOOD-Anpassungen
+  // MOOD-Anpassungen - Alle deutlich näher an natürlichen Stimmen
   if (currentMood === 'sad' || currentMood === 'tired') {
-    pitch = 1.10;  // Tiefer & sanft
-    rate = 0.90;   // Langsamer & beruhigend
+    pitch = 0.95;  // Sehr tief & sanft
+    rate = 0.85;   // Langsamer & beruhigend
   } else if (currentMood === 'excited' || currentMood === 'happy') {
-    pitch = 1.35;  // Höher für Freude (aber natürlich)
-    rate = 1.20;   // Schneller für Aufregung
+    pitch = 1.15;  // Nur leicht höher (natürlich begeistert)
+    rate = 1.25;   // Schneller für Aufregung
   }
 
-  // KEYWORD-Anpassungen
+  // KEYWORD-Anpassungen - Sehr subtil!
   if (hasPraise) {
-    pitch = Math.min(1.50, pitch + 0.10);  // Leicht höher für Lob
-    rate = Math.min(1.22, rate + 0.05);    // Schneller für Begeisterung
+    pitch = Math.min(1.20, pitch + 0.08);  // Nur leicht höher
+    rate = Math.min(1.28, rate + 0.04);    // Minimal schneller
   }
   if (hasComfort) {
-    pitch = Math.max(1.05, pitch - 0.10);  // Tiefer für Mitgefühl
-    rate = Math.max(0.85, rate - 0.08);    // Langsamer für Sanftheit
+    pitch = Math.max(0.90, pitch - 0.08);  // Nur leicht tiefer
+    rate = Math.max(0.80, rate - 0.08);    // Langsamer
   }
 
-  // FRAGEN: Melodischer Anstieg (aber subtil)
+  // FRAGEN: Sehr subtil & natürlich
   if (isQuestion) {
-    pitch = Math.min(1.50, pitch + 0.10);   // Leicht höher am Ende (freundlich)
+    pitch = Math.min(1.12, pitch + 0.06);   // Nur ganz leicht höher
   }
 
   // ────────────────────────────────────────
@@ -1677,16 +1677,16 @@ function speak(text) {
     utterance.pitch = pitch;
     utterance.rate = rate;
 
-    // Expression je nach Satztyp (aber subtil & natürlich)
+    // Expression je nach Satztyp - SEHR subtil & natürlich
     let expressionPitch = pitch;
     let expressionRate = rate;
 
     if (isQuestionChunk) {
-      expressionPitch = Math.min(1.50, pitch + 0.08);  // Leicht höher
+      expressionPitch = Math.min(1.10, pitch + 0.05);  // Kaum höher
     }
     if (isExclamationChunk) {
-      expressionPitch = Math.min(1.45, pitch + 0.08);    // Freude (natürlich)
-      expressionRate = Math.min(1.25, rate + 0.05);      // Schneller (aber natürlich)
+      expressionPitch = Math.min(1.15, pitch + 0.06);    // Kaum höher
+      expressionRate = Math.min(1.28, rate + 0.04);      // Minimal schneller
     }
 
     utterance.pitch = expressionPitch;
