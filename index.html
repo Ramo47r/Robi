@@ -1529,7 +1529,7 @@ function speak(text) {
   window.speechSynthesis.cancel();
 
   // ────────────────────────────────────────
-  // TEXT SÄUBERN: Emojis entfernen
+  // TEXT SÄUBERN: Natürlichere Aussprache
   // ────────────────────────────────────────
   const cleanText = Array.from(text)
     .filter(ch => {
@@ -1537,7 +1537,8 @@ function speak(text) {
       return cp < 0x2600 || (cp > 0x27FF && cp < 0x1F300) || cp > 0x1FFFF;
     })
     .join('')
-    .replace(/  +/g, ' ')
+    .replace(/  +/g, ' ')           // Mehrere Leerzeichen → eins
+    .replace(/([a-z])-([a-z])/gi, '$1 $2')  // Bindestriche → Leerzeichen (für natürlichere Aussprache)
     .trim();
 
   if (!cleanText) return;
@@ -1561,32 +1562,33 @@ function speak(text) {
   // ────────────────────────────────────────
   // BASIS-WERTE: Warm, natürlich, kinderfreundlich
   // ────────────────────────────────────────
-  // 🎯 DEUTLICH MENSCHLICHER: Tiefere, natürlichere Stimme
-  let pitch = 1.0;     // ← DEUTLICH TIEFER: 1.0 = Normale Stimme (menschlich!)
-  let rate = 1.2;      // ← SCHNELL & NATÜRLICH: 1.2 für echte menschliche Rede
+  // 🎯 NOCH MENSCHLICHER: Optimales Tempo & Tonhöhe für natürliche Konversation
+  let pitch = 1.0;     // Angenehme, natürliche Stimmlage
+  let rate = 1.0;      // ← DEUTLICH VERBESSERT: 1.0 = Natürliches, menschliches Sprechtempo
+                       // (nicht zu schnell, nicht zu langsam - wie ein echter Mensch)
 
-  // MOOD-Anpassungen - Alle deutlich näher an natürlichen Stimmen
+  // MOOD-Anpassungen - Subtil & authentisch
   if (currentMood === 'sad' || currentMood === 'tired') {
-    pitch = 0.95;  // Sehr tief & sanft
-    rate = 0.85;   // Langsamer & beruhigend
+    pitch = 0.92;      // Sanft & einfühlsam
+    rate = 0.88;       // Nachdenklich & ruhig
   } else if (currentMood === 'excited' || currentMood === 'happy') {
-    pitch = 1.15;  // Nur leicht höher (natürlich begeistert)
-    rate = 1.25;   // Schneller für Aufregung
+    pitch = 1.12;      // Leicht höher (freundliche Energie)
+    rate = 1.15;       // Etwas schneller, aber immer noch natürlich
   }
 
-  // KEYWORD-Anpassungen - Sehr subtil!
+  // KEYWORD-Anpassungen - Kaum merkbar, aber wirkungsvoll
   if (hasPraise) {
-    pitch = Math.min(1.20, pitch + 0.08);  // Nur leicht höher
-    rate = Math.min(1.28, rate + 0.04);    // Minimal schneller
+    pitch = Math.min(1.18, pitch + 0.06);  // Nur minimal höher
+    rate = Math.min(1.18, rate + 0.08);    // Ein wenig lebhafter
   }
   if (hasComfort) {
-    pitch = Math.max(0.90, pitch - 0.08);  // Nur leicht tiefer
-    rate = Math.max(0.80, rate - 0.08);    // Langsamer
+    pitch = Math.max(0.88, pitch - 0.06);  // Nur minimal tiefer
+    rate = Math.max(0.85, rate - 0.06);    // Etwas langsamer & sanfter
   }
 
-  // FRAGEN: Sehr subtil & natürlich
+  // FRAGEN: Melodischer Anstieg - sehr natürlich
   if (isQuestion) {
-    pitch = Math.min(1.12, pitch + 0.06);   // Nur ganz leicht höher
+    pitch = Math.min(1.08, pitch + 0.04);   // Ganz leicht höher am Ende
   }
 
   // ────────────────────────────────────────
@@ -1693,12 +1695,13 @@ function speak(text) {
     utterance.rate = expressionRate;
 
     // ───────────────────────────────────────
-    // QUEUE-MANAGEMENT: Nahtlos!
+    // QUEUE-MANAGEMENT: Nahtlos & fließend!
     // ───────────────────────────────────────
     utterance.onend = () => {
       chunkIdx++;
-      // Sehr minimale Pause (nur wenn mehrere Chunks) - für fließende Rede
-      const pauseMs = chunks.length > 1 && !isLastChunk ? 8 : 0;
+      // Intelligente, kaum merkbare Pausen - für echte Konversation
+      const pauseMs = chunks.length > 1 && !isLastChunk ? 150 : 0;
+      // Längere Pausen nur zwischen größeren Satzgruppen
       setTimeout(speakNextChunk, pauseMs);
     };
 
