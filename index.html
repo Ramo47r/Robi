@@ -1554,6 +1554,14 @@ if (synth) {
   loadVoices();
   setTimeout(loadVoices, 500);
 }
+  setTimeout(loadVoices, 100);
+  setTimeout(loadVoices, 300);
+  setTimeout(loadVoices, 1500);
+  if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+    setTimeout(loadVoices, 200);
+    setTimeout(loadVoices, 800);
+    setTimeout(loadVoices, 2500);
+  }
 
 function onVoiceChange() {
   const idx = parseInt(document.getElementById('voiceSel').value);
@@ -1620,33 +1628,39 @@ function speak(text) {
   // BASIS-WERTE: Natürlich, klar, sehr menschlich
   // ────────────────────────────────────────
   // 🎯 SEHR MENSCHLICH: Wie echte menschliche Konversation
+  // 🎯 MOBILE-OPTIMIERT: Langsamer für bessere Verständlichkeit!
+  
+  const isMobileMode = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   let pitch = 1.0;         // Normale, natürliche Stimmlage (nicht künstlich!)
-  let rate = 0.95;         // Natürliches, entspanntes Sprechtempo
-                           // (0.95 = sehr klar verständlich wie ein echter Mensch)
+  let rate = isMobileMode ? 0.85 : 0.95;  // Mobile: Langsamer für Klarheit! Desktop: Normal
+                           // Mobile: 0.85 = kristallklare Aussprache
+                           // Desktop: 0.95 = natürlich & flüssig
 
   // MOOD-Anpassungen - SEHR subtil (nur 0.02-0.05 Variation!)
   if (currentMood === 'sad' || currentMood === 'tired') {
     pitch = 0.98;         // Kaum merkbar tiefer (einfühlsam)
-    rate = 0.88;          // Ein wenig langsamer (beruhigend)
+    rate = Math.max(isMobileMode ? 0.80 : 0.85, rate - 0.07);  // Noch langsamer
   } else if (currentMood === 'excited' || currentMood === 'happy') {
     pitch = 1.03;         // Kaum merkbar höher (lebendig)
-    rate = 1.02;          // Kaum merkbar schneller (energetisch)
+    rate = Math.min(isMobileMode ? 0.90 : 1.02, rate + 0.02);  // Mobile: max 0.90
   }
 
   // KEYWORD-Anpassungen - Kaum merkbar!
   if (hasPraise) {
     pitch = Math.min(1.05, pitch + 0.03);  // Sehr subtil
-    rate = Math.min(1.03, rate + 0.02);    // Kaum merkbar
+    rate = Math.min(isMobileMode ? 0.92 : 1.03, rate + 0.02);  // Mobile: max 0.92
   }
   if (hasComfort) {
     pitch = Math.max(0.97, pitch - 0.03);  // Sehr subtil
-    rate = Math.max(0.88, rate - 0.02);    // Kaum merkbar
+    rate = Math.max(isMobileMode ? 0.80 : 0.88, rate - 0.02);  // Mobile: min 0.80
   }
 
   // FRAGEN: Ganz natürlicher Anstieg
   if (isQuestion) {
     pitch = Math.min(1.04, pitch + 0.02);  // Sehr minimal
   }
+  
+  console.log(`[speak] Mobile: ${isMobileMode}, Rate: ${rate.toFixed(2)}, Pitch: ${pitch.toFixed(2)}`);
 
   // ────────────────────────────────────────
   // INTELLIGENTES CHUNKING: Fließend & ChatGPT-ähnlich!
@@ -1695,36 +1709,42 @@ function speak(text) {
     const utterance = new SpeechSynthesisUtterance(chunk);
     
     // ───────────────────────────────────────
-    // VOICE SELECTION: Beste deutsche Stimme
-    // 🎯 OPTIMIERT: Menschlicher & natürlicher
+    // VOICE SELECTION: Beste deutsche Stimme für Mobile optimiert
+    // 🎯 MOBILE-OPTIMIERT: Klarste Stimme wählen!
     // ───────────────────────────────────────
-    const voices = window.speechSynthesis.getVoices();
-    const germanVoices = voices.filter(v => v.lang.toLowerCase().startsWith('de'));
     
-    // 🎯 BEVORZUGTE STIMMEN (Natürlich, Klar, Sehr Menschlich):
-    const preferredNames = [
-      'Google Deutsch',        // 🥇 BESTE: Natürlich, kristallklar & menschlich!
-      'Microsoft Zira',        // 🥈 Sehr natürlich & verständlich
-      'Microsoft Hanna',       // 🥉 Warm & human-like
-      'Katja Online',          // Modern & klar
-      'Katja',                 // Deutsche Standardstimme
-      'Anna',                  // Klare, natürliche Stimme
-      'Hanna',                 // Freundlich & verständlich
-      'Hedda'                  // Warm & natural
-    ];
+    // Nutze globale voices Liste (wird bei init geladen)
+    let chunkVoice = null;
     
-    let chunkVoice = germanVoices[0]; // Fallback
-    for (const prefName of preferredNames) {
-      const found = germanVoices.find(v => v.name.includes(prefName));
-      if (found) {
-        chunkVoice = found;
-        console.log('[speak] Nutze Stimme:', found.name);
-        break;
+    // Bei Mobile: Bevorzuge Google Deutsch über alles
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // 🎯 MOBILE PRIORITÄT: Google Deutsch ist die einzige klare Stimme!
+      const googleDeutsch = voices.find(v => v.name.includes('Google Deutsch'));
+      if (googleDeutsch) {
+        chunkVoice = googleDeutsch;
+        console.log('[speak-mobile] Google Deutsch ausgewählt');
+      }
+    }
+    
+    // Fallback wenn nicht Mobile oder Google nicht gefunden
+    if (!chunkVoice && voices && voices.length > 0) {
+      chunkVoice = voices[0];  // Globale Stimme verwenden
+    }
+    
+    // Wenn immer noch nichts - hole frische Stimmen
+    if (!chunkVoice) {
+      const freshVoices = window.speechSynthesis.getVoices();
+      const germanVoices = freshVoices.filter(v => v.lang.toLowerCase().startsWith('de'));
+      if (germanVoices.length > 0) {
+        chunkVoice = germanVoices[0];
       }
     }
     
     if (chunkVoice) {
       utterance.voice = chunkVoice;
+      console.log('[speak] Stimme:', chunkVoice.name);
     }
 
     // ───────────────────────────────────────
