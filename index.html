@@ -1039,14 +1039,14 @@ let lastRobiText = '';
 let starCount = parseInt(localStorage.getItem('robi_stars') || '0');
 
 const AGE_GROUPS = {
-  // Kindlich + leicht roboterhaft: hohe Pitch + leicht schnelleres Tempo
-  '1-3':  { label: '🍼 1-3 Jahre',  rate: 0.88, pitch: 1.40,
+  // 🎯 KOMPLETT MENSCHLICH: Natürliches Sprechtempo, klare Aussprache, zero roboterhaft!
+  '1-3':  { label: '🍼 1-3 Jahre',  rate: 0.90, pitch: 1.15,
              greeting: 'Hallo mein Schatz! Ich bin Robi! Schön dass du da bist!' },
-  '4-6':  { label: '🎈 4-6 Jahre',  rate: 0.95, pitch: 1.35,
-             greeting: 'Hallo! Ich bin Robi, dein Roboter-Freund! Was machen wir heute?' },
-  '7-9':  { label: '🎒 7-9 Jahre',  rate: 1.00, pitch: 1.28,
+  '4-6':  { label: '🎈 4-6 Jahre',  rate: 0.95, pitch: 1.10,
+             greeting: 'Hallo! Ich bin Robi, dein Freund! Was machen wir heute?' },
+  '7-9':  { label: '🎒 7-9 Jahre',  rate: 1.00, pitch: 1.05,
              greeting: 'Hi! Ich bin Robi! Worauf hast du heute Lust?' },
-  '10-12':{ label: '🎮 10-12 Jahre', rate: 1.05, pitch: 1.20,
+  '10-12':{ label: '🎮 10-12 Jahre', rate: 1.05, pitch: 1.00,
              greeting: 'Hey! Ich bin Robi. Was wollen wir heute machen?' },
 };
 
@@ -1466,9 +1466,9 @@ function reactToMood(mood) {
 const synth = window.speechSynthesis;
 let voices = [];
 let selectedVoice = null;
-// 🎯 OPTIMIERT: Langsamere, freundlichere Standard-Werte
-let speechRate = 0.85;    // ← Etwas langsamer für bessere Verständlichkeit
-let speechPitch = 1.45;   // ← Höher & fröhlicher für Kinder
+// 🎯 KOMPLETT MENSCHLICH: Natürliches, klares Sprechen
+let speechRate = 0.95;    // ← Natürliches, entspanntes Sprechtempo (wie ein echter Mensch)
+let speechPitch = 1.05;   // ← Normale Tonhöhe (nicht künstlich erhöht!)
 
 function loadVoices() {
   if (!synth) return;
@@ -1589,35 +1589,35 @@ function speak(text) {
   const isQuestion = cleanText.trim().endsWith('?') || lowerText.includes('warum') || lowerText.includes('wie') || lowerText.includes('meinst du') || lowerText.includes('möchtest du');
 
   // ────────────────────────────────────────
-  // BASIS-WERTE: ChatGPT-ähnlich (weiblich, warm, klar)
+  // BASIS-WERTE: Natürlich, klar, sehr menschlich
   // ────────────────────────────────────────
-  // 🎯 CHATGPT-STIL: Warme, natürliche Stimme mit bedachtem Tempo
-  let pitch = 1.05;    // Angenehme, feminine Tonhöhe (nicht zu hoch)
-  let rate = 0.92;     // ← CHATGPT-STIL: Etwas langsamer für Klarheit & Wärme
-                       // (0.92 = sehr verständlich und angenehm zu hören)
+  // 🎯 SEHR MENSCHLICH: Wie echte menschliche Konversation
+  let pitch = 1.0;         // Normale, natürliche Stimmlage (nicht künstlich!)
+  let rate = 0.95;         // Natürliches, entspanntes Sprechtempo
+                           // (0.95 = sehr klar verständlich wie ein echter Mensch)
 
-  // MOOD-Anpassungen - Subtil & warm
+  // MOOD-Anpassungen - SEHR subtil (nur 0.02-0.05 Variation!)
   if (currentMood === 'sad' || currentMood === 'tired') {
-    pitch = 0.98;      // Sanfte, tiefere Tonhöhe
-    rate = 0.80;       // Deutlich langsamer & beruhigend
+    pitch = 0.98;         // Kaum merkbar tiefer (einfühlsam)
+    rate = 0.88;          // Ein wenig langsamer (beruhigend)
   } else if (currentMood === 'excited' || currentMood === 'happy') {
-    pitch = 1.15;      // Etwas höher (aber nicht zu viel)
-    rate = 1.05;       // Minimal schneller, bleibt aber gemächlich
+    pitch = 1.03;         // Kaum merkbar höher (lebendig)
+    rate = 1.02;          // Kaum merkbar schneller (energetisch)
   }
 
-  // KEYWORD-Anpassungen - Kaum merkbar, aber wirkungsvoll
+  // KEYWORD-Anpassungen - Kaum merkbar!
   if (hasPraise) {
-    pitch = Math.min(1.20, pitch + 0.06);  // Nur minimal höher
-    rate = Math.min(1.08, rate + 0.05);    // Ein wenig lebhafter, aber still gemächlich
+    pitch = Math.min(1.05, pitch + 0.03);  // Sehr subtil
+    rate = Math.min(1.03, rate + 0.02);    // Kaum merkbar
   }
   if (hasComfort) {
-    pitch = Math.max(0.95, pitch - 0.06);  // Nur minimal tiefer
-    rate = Math.max(0.80, rate - 0.05);    // Etwas langsamer & sanfter
+    pitch = Math.max(0.97, pitch - 0.03);  // Sehr subtil
+    rate = Math.max(0.88, rate - 0.02);    // Kaum merkbar
   }
 
-  // FRAGEN: Melodischer Anstieg - sehr natürlich & ChatGPT-ähnlich
+  // FRAGEN: Ganz natürlicher Anstieg
   if (isQuestion) {
-    pitch = Math.min(1.12, pitch + 0.05);   // Ganz leicht höher am Ende
+    pitch = Math.min(1.04, pitch + 0.02);  // Sehr minimal
   }
 
   // ────────────────────────────────────────
@@ -1673,16 +1673,16 @@ function speak(text) {
     const voices = window.speechSynthesis.getVoices();
     const germanVoices = voices.filter(v => v.lang.toLowerCase().startsWith('de'));
     
-    // 🎯 BEVORZUGTE STIMMEN (Weiblich, Warm, ChatGPT-ähnlich):
+    // 🎯 BEVORZUGTE STIMMEN (Natürlich, Klar, Sehr Menschlich):
     const preferredNames = [
-      'Microsoft Clara',       // 🥇 Sehr warm & weiblich - CHATGPT-ähnlich!
-      'Microsoft Zira',        // 🥈 Natürlich, freundlich & weiblich
-      'Google Deutsch',        // 🥉 Klar & verständlich
-      'Katja Online',          // Modern, weiblich & angenehm
-      'Katja',                 // Weibliche deutsche Standardstimme
-      'Hedda',                 // Warm & natürlich
-      'Anna',                  // Klassisch weiblich
-      'Hanna'                  // Freundlich & verständlich
+      'Google Deutsch',        // 🥇 BESTE: Natürlich, kristallklar & menschlich!
+      'Microsoft Zira',        // 🥈 Sehr natürlich & verständlich
+      'Microsoft Hanna',       // 🥉 Warm & human-like
+      'Katja Online',          // Modern & klar
+      'Katja',                 // Deutsche Standardstimme
+      'Anna',                  // Klare, natürliche Stimme
+      'Hanna',                 // Freundlich & verständlich
+      'Hedda'                  // Warm & natural
     ];
     
     let selectedVoice = germanVoices[0]; // Fallback
@@ -1709,29 +1709,28 @@ function speak(text) {
     utterance.pitch = pitch;
     utterance.rate = rate;
 
-    // Expression je nach Satztyp - SEHR subtil & natürlich
+    // Expression je nach Satztyp - SEHR subtil & natürlich (kein Roboter!)
     let expressionPitch = pitch;
     let expressionRate = rate;
 
     if (isQuestionChunk) {
-      expressionPitch = Math.min(1.10, pitch + 0.05);  // Kaum höher
+      expressionPitch = Math.min(1.02, pitch + 0.01);  // Kaum merkbar höher
     }
     if (isExclamationChunk) {
-      expressionPitch = Math.min(1.15, pitch + 0.06);    // Kaum höher
-      expressionRate = Math.min(1.28, rate + 0.04);      // Minimal schneller
+      expressionPitch = Math.min(1.03, pitch + 0.02);  // Kaum höher
+      expressionRate = Math.min(1.00, rate + 0.01);    // Kaum schneller
     }
 
     utterance.pitch = expressionPitch;
     utterance.rate = expressionRate;
 
     // ───────────────────────────────────────
-    // QUEUE-MANAGEMENT: Nahtlos & fließend!
+    // QUEUE-MANAGEMENT: Natürlich & fließend!
     // ───────────────────────────────────────
     utterance.onend = () => {
       chunkIdx++;
-      // Intelligente, kaum merkbare Pausen - für echte Konversation
-      const pauseMs = chunks.length > 1 && !isLastChunk ? 150 : 0;
-      // Längere Pausen nur zwischen größeren Satzgruppen
+      // Sehr minimale Pausen (wie echter Mensch) - für natürliche Konversation
+      const pauseMs = chunks.length > 1 && !isLastChunk ? 100 : 0;
       setTimeout(speakNextChunk, pauseMs);
     };
 
