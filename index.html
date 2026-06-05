@@ -1176,15 +1176,13 @@ function selectAge(age) {
 
   showAgeBubble(grp.greeting);
 
-  // Switch to main screen quickly — don't wait for speech to finish
-  // Speech plays in background
-  setTimeout(() => {
+  // First, wait for speech to actually start speaking on mobile
+  // (browser audio policy requires user interaction)
+  speakOnAge(grp.greeting, () => {
+    // Only switch screens AFTER speech has started/finished
     showScreen('main');
     initMain();
-  }, 600);
-
-  // Try to speak greeting (may be blocked first time by browser policy)
-  speakOnAge(grp.greeting, null);
+  });
 }
 
 function goToAgeSelect() {
@@ -1202,15 +1200,19 @@ function showAgeBubble(text) {
 }
 
 function speakOnAge(text, onDone) {
-  // Always navigate after a max wait, even if speech is blocked by browser
-  let navigated = false;
-  function doNav() {
-    if (navigated) return;
-    navigated = true;
+  // Callback nur einmal aufrufen
+  let isDone = false;
+  function finishCallback() {
+    if (isDone) return;
+    isDone = true;
     if (onDone) onDone();
   }
 
-  if (!synth) { setTimeout(doNav, 300); return; }
+  if (!synth) { 
+    setTimeout(finishCallback, 500); 
+    return; 
+  }
+
   synth.cancel();
   const r = document.getElementById('ageRobot');
   if (r) r.classList.add('talking');
@@ -1220,15 +1222,30 @@ function speakOnAge(text, onDone) {
   utter.lang = 'de-DE';
   utter.rate = speechRate;
   utter.pitch = speechPitch;
+  utter.volume = 1.0;
 
-  utter.onend = () => { if (r) r.classList.remove('talking'); doNav(); };
-  utter.onerror = () => { if (r) r.classList.remove('talking'); doNav(); };
+  utter.onstart = () => {
+    console.log('[speakOnAge] Speech started');
+  };
+
+  utter.onend = () => { 
+    if (r) r.classList.remove('talking');
+    console.log('[speakOnAge] Speech finished');
+    finishCallback();
+  };
+
+  utter.onerror = (err) => { 
+    if (r) r.classList.remove('talking');
+    console.error('[speakOnAge] Speech error:', err.error);
+    finishCallback();
+  };
+
   synth.speak(utter);
 
-  // Safety fallback: if speech never fires (browser policy), still navigate
-  // Estimate duration = text length / chars per second + buffer
-  const estimatedMs = Math.max(1500, text.length * 65);
-  setTimeout(doNav, estimatedMs);
+  // Safety fallback: auf Mobile kann Audio blockiert sein
+  // Längere Wartezeit für vollständiges Sprechen
+  const estimatedMs = Math.max(2500, text.length * 75);
+  setTimeout(finishCallback, estimatedMs);
 }
 
 // ════════════════════════════════════════
@@ -1454,42 +1471,54 @@ let speechRate = 0.85;    // ← Etwas langsamer für bessere Verständlichkeit
 let speechPitch = 1.45;   // ← Höher & fröhlicher für Kinder
 
 function loadVoices() {
-  if (!synth) return;
-  const allVoices = synth.getVoices();
-  voices = allVoices.filter(v => v.lang.toLowerCase().startsWith('de'));
-  const sel = document.getElementById('voiceSel');
-  sel.innerHTML = '';
-  if (voices.length === 0) {
-    const opt = document.createElement('option');
-    opt.textContent = 'Keine deutsche Stimme';
-    sel.appendChild(opt);
-    sel.disabled = true;
-    return;
-  }
-  sel.disabled = false;
-  const preferredNames = [
-    'Google Deutsch',     // Android Chrome — clearest, most natural
-    'Microsoft Hanna',    // Windows — warm female, child-friendly
-    'Hanna',
-    'Microsoft Hedda',    // Windows — clear female
-    'Hedda',
-    'Anna',               // iOS/macOS — crisp, clear
-    'Petra',
-    'Katja', 'Microsoft Katja',
-    'Vicki', 'Eva',
-  ];
-  let bestIdx = 0;
-  voices.forEach((v, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = v.name + ' (' + v.lang + ')';
-    sel.appendChild(opt);
-    if (preferredNames.some(n => v.name.includes(n))) bestIdx = i;
-  });
-  const savedIdx = parseInt(localStorage.getItem('robi_voice_idx'));
-  if (!isNaN(savedIdx) && voices[savedIdx]) bestIdx = savedIdx;
-  sel.selectedIndex = bestIdx;
-  selectedVoice = voices[bestIdx];
+  if (!synth) return;
+  const allVoices = synth.getVoices();
+  voices = allVoices.filter(v => v.lang.toLowerCase().startsWith('de'));
+  const sel = document.getElementById('voiceSel');
+  sel.innerHTML = '';
+  if (voices.length === 0) {
+    const opt = document.createElement('option');
+    opt.textContent = 'Keine deutsche Stimme';
+    sel.appendChild(opt);
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+  
+  // Priorisierung je nach Device
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const preferredNames = isMobile 
+    ? [
+        'Google Deutsch',        // 🥇 Android Chrome — beste Qualität!
+        'Microsoft Clara',
+        'Microsoft Zira',
+        'Hanna', 'Microsoft Hanna',
+        'Katja', 'Microsoft Katja',
+        'Anna', 'Hedda',
+      ]
+    : [
+        'Microsoft Clara',
+        'Google Deutsch',
+        'Microsoft Zira',
+        'Hanna', 'Microsoft Hanna',
+        'Katja', 'Microsoft Katja',
+        'Anna', 'Hedda',
+      ];
+  
+  let bestIdx = 0;
+  voices.forEach((v, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = v.name + ' (' + v.lang + ')';
+    sel.appendChild(opt);
+    if (preferredNames.some(n => v.name.includes(n))) bestIdx = i;
+  });
+  
+  const savedIdx = parseInt(localStorage.getItem('robi_voice_idx'));
+  if (!isNaN(savedIdx) && voices[savedIdx]) bestIdx = savedIdx;
+  sel.selectedIndex = bestIdx;
+  selectedVoice = voices[bestIdx];
+  console.log('[loadVoices] Stimme:', selectedVoice?.name);
 }
 
 if (synth) {
@@ -1560,49 +1589,50 @@ function speak(text) {
   const isQuestion = cleanText.trim().endsWith('?') || lowerText.includes('warum') || lowerText.includes('wie') || lowerText.includes('meinst du') || lowerText.includes('möchtest du');
 
   // ────────────────────────────────────────
-  // BASIS-WERTE: Warm, natürlich, kinderfreundlich
+  // BASIS-WERTE: ChatGPT-ähnlich (weiblich, warm, klar)
   // ────────────────────────────────────────
-  // 🎯 NOCH MENSCHLICHER: Optimales Tempo & Tonhöhe für natürliche Konversation
-  let pitch = 1.0;     // Angenehme, natürliche Stimmlage
-  let rate = 1.0;      // ← DEUTLICH VERBESSERT: 1.0 = Natürliches, menschliches Sprechtempo
-                       // (nicht zu schnell, nicht zu langsam - wie ein echter Mensch)
+  // 🎯 CHATGPT-STIL: Warme, natürliche Stimme mit bedachtem Tempo
+  let pitch = 1.05;    // Angenehme, feminine Tonhöhe (nicht zu hoch)
+  let rate = 0.92;     // ← CHATGPT-STIL: Etwas langsamer für Klarheit & Wärme
+                       // (0.92 = sehr verständlich und angenehm zu hören)
 
-  // MOOD-Anpassungen - Subtil & authentisch
+  // MOOD-Anpassungen - Subtil & warm
   if (currentMood === 'sad' || currentMood === 'tired') {
-    pitch = 0.92;      // Sanft & einfühlsam
-    rate = 0.88;       // Nachdenklich & ruhig
+    pitch = 0.98;      // Sanfte, tiefere Tonhöhe
+    rate = 0.80;       // Deutlich langsamer & beruhigend
   } else if (currentMood === 'excited' || currentMood === 'happy') {
-    pitch = 1.12;      // Leicht höher (freundliche Energie)
-    rate = 1.15;       // Etwas schneller, aber immer noch natürlich
+    pitch = 1.15;      // Etwas höher (aber nicht zu viel)
+    rate = 1.05;       // Minimal schneller, bleibt aber gemächlich
   }
 
   // KEYWORD-Anpassungen - Kaum merkbar, aber wirkungsvoll
   if (hasPraise) {
-    pitch = Math.min(1.18, pitch + 0.06);  // Nur minimal höher
-    rate = Math.min(1.18, rate + 0.08);    // Ein wenig lebhafter
+    pitch = Math.min(1.20, pitch + 0.06);  // Nur minimal höher
+    rate = Math.min(1.08, rate + 0.05);    // Ein wenig lebhafter, aber still gemächlich
   }
   if (hasComfort) {
-    pitch = Math.max(0.88, pitch - 0.06);  // Nur minimal tiefer
-    rate = Math.max(0.85, rate - 0.06);    // Etwas langsamer & sanfter
+    pitch = Math.max(0.95, pitch - 0.06);  // Nur minimal tiefer
+    rate = Math.max(0.80, rate - 0.05);    // Etwas langsamer & sanfter
   }
 
-  // FRAGEN: Melodischer Anstieg - sehr natürlich
+  // FRAGEN: Melodischer Anstieg - sehr natürlich & ChatGPT-ähnlich
   if (isQuestion) {
-    pitch = Math.min(1.08, pitch + 0.04);   // Ganz leicht höher am Ende
+    pitch = Math.min(1.12, pitch + 0.05);   // Ganz leicht höher am Ende
   }
 
   // ────────────────────────────────────────
-  // INTELLIGENTES CHUNKING: Fließend!
+  // INTELLIGENTES CHUNKING: Fließend & ChatGPT-ähnlich!
   // ────────────────────────────────────────
   const chunks = [];
   
-  // Teile nur bei SEHR langen Sätzen (>250 Zeichen) - weniger Breaks!
-  if (cleanText.length > 250 && /[.!?]/.test(cleanText)) {
+  // Nur bei SEHR langen Texten aufteilen (>350 Zeichen) - für mehr Fluss!
+  if (cleanText.length > 350 && /[.!?]/.test(cleanText)) {
     const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
     let currentChunk = '';
     
     sentences.forEach(sent => {
-      if (currentChunk.length + sent.length < 250) {
+      // Längere Chunks erlauben (bis 280 Zeichen) - für natürlichere Satz-Gruppen
+      if (currentChunk.length + sent.length < 280) {
         currentChunk += (currentChunk ? ' ' : '') + sent;
       } else {
         if (currentChunk) chunks.push(currentChunk.trim());
@@ -1643,16 +1673,16 @@ function speak(text) {
     const voices = window.speechSynthesis.getVoices();
     const germanVoices = voices.filter(v => v.lang.toLowerCase().startsWith('de'));
     
-    // 🎯 BEVORZUGTE STIMMEN (Menschlich & Natürlich):
+    // 🎯 BEVORZUGTE STIMMEN (Weiblich, Warm, ChatGPT-ähnlich):
     const preferredNames = [
-      'Microsoft Clara',       // 🥇 Sehr menschlich & warm!
-      'Microsoft Zira',        // 🥈 Natürlich & freundlich
+      'Microsoft Clara',       // 🥇 Sehr warm & weiblich - CHATGPT-ähnlich!
+      'Microsoft Zira',        // 🥈 Natürlich, freundlich & weiblich
       'Google Deutsch',        // 🥉 Klar & verständlich
-      'Katja Online',          // Modern & menschlich
-      'Katja',
-      'Hedda',
-      'Anna',
-      'Hanna'                  // Fallback
+      'Katja Online',          // Modern, weiblich & angenehm
+      'Katja',                 // Weibliche deutsche Standardstimme
+      'Hedda',                 // Warm & natürlich
+      'Anna',                  // Klassisch weiblich
+      'Hanna'                  // Freundlich & verständlich
     ];
     
     let selectedVoice = germanVoices[0]; // Fallback
