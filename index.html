@@ -1227,6 +1227,8 @@ function speakOnAge(text, onDone) {
   utter.onstart = () => {
     console.log('[speakOnAge] Speech started');
   };
+  
+  
 
   utter.onend = () => { 
     if (r) r.classList.remove('talking');
@@ -1236,7 +1238,7 @@ function speakOnAge(text, onDone) {
 
   utter.onerror = (err) => { 
     if (r) r.classList.remove('talking');
-    console.error('[speakOnAge] Speech error:', err.error);
+    console.error('[speakOnAge] Speech error:', err?.error || 'Unbekannt');
     finishCallback();
   };
 
@@ -1252,10 +1254,15 @@ function speakOnAge(text, onDone) {
 // MAIN SCREEN INIT
 // ════════════════════════════════════════
 function initMain() {
+  if (!messages) messages = [];
   messages = [];
   renderLessonCards();
   updateStarCount();
   const m = MODES[currentMode];
+  if (!m) {
+    console.warn('[initMain] Mode nicht gefunden:', currentMode);
+    return;
+  }
   const welcome = m.welcome[currentAge] || m.welcome['7-9'];
   setBubble(welcome);
   lastRobiText = welcome;
@@ -1335,30 +1342,51 @@ function resetChat() {
 }
 
 function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
+  try {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const screenEl = document.getElementById('screen-' + name);
+    if (screenEl) {
+      screenEl.classList.add('active');
+    } else {
+      console.warn('[showScreen] Screen nicht gefunden:', name);
+    }
+  } catch (e) {
+    console.error('[showScreen] Fehler:', e.message);
+  }
 }
 
 // ════════════════════════════════════════
 // MENU
 // ════════════════════════════════════════
 function openMenu() {
-  document.getElementById('menuDrawer').classList.add('show');
-  document.getElementById('menuOverlay').classList.add('show');
-  document.querySelectorAll('.menu-item').forEach(el => {
-    const id = el.id.replace('m-', '');
-    if (parentLocks[id]) {
-      el.style.opacity = '0.4';
-      const lab = el.querySelector('span:last-child');
-      if (!lab.textContent.includes('🔒')) lab.textContent += ' 🔒';
-    } else {
-      el.style.opacity = '1';
-    }
-  });
+  try {
+    const drawer = document.getElementById('menuDrawer');
+    const overlay = document.getElementById('menuOverlay');
+    if (drawer) drawer.classList.add('show');
+    if (overlay) overlay.classList.add('show');
+    document.querySelectorAll('.menu-item').forEach(el => {
+      const id = el.id.replace('m-', '');
+      if (parentLocks[id]) {
+        el.style.opacity = '0.4';
+        const lab = el.querySelector('span:last-child');
+        if (!lab.textContent.includes('🔒')) lab.textContent += ' 🔒';
+      } else {
+        el.style.opacity = '1';
+      }
+    });
+  } catch (e) {
+    console.error('[openMenu] Fehler:', e.message);
+  }
 }
 function closeMenu() {
-  document.getElementById('menuDrawer').classList.remove('show');
-  document.getElementById('menuOverlay').classList.remove('show');
+  try {
+    const drawer = document.getElementById('menuDrawer');
+    const overlay = document.getElementById('menuOverlay');
+    if (drawer) drawer.classList.remove('show');
+    if (overlay) overlay.classList.remove('show');
+  } catch (e) {
+    console.error('[closeMenu] Fehler:', e.message);
+  }
 }
 
 // ════════════════════════════════════════
@@ -1685,18 +1713,18 @@ function speak(text) {
       'Hedda'                  // Warm & natural
     ];
     
-    let selectedVoice = germanVoices[0]; // Fallback
+    let chunkVoice = germanVoices[0]; // Fallback
     for (const prefName of preferredNames) {
       const found = germanVoices.find(v => v.name.includes(prefName));
       if (found) {
-        selectedVoice = found;
+        chunkVoice = found;
         console.log('[speak] Nutze Stimme:', found.name);
         break;
       }
     }
     
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
+    if (chunkVoice) {
+      utterance.voice = chunkVoice;
     }
 
     // ───────────────────────────────────────
@@ -1747,19 +1775,24 @@ function speak(text) {
 
 
 function toggleListen() {
-  if (!SR) {
-    setBubble('Sprache nicht unterstützt. Tipp lieber!');
-    openTextInput();
-    return;
-  }
-  if (isListening) {
-    if (recognition) try { recognition.stop(); } catch (e) {}
-    return;
-  }
-  if (synth) synth.cancel();
-  document.getElementById('robot').classList.remove('talking');
-  try { recognition.start(); startListening(); }
-  catch (err) { setBubble('Konnte nicht starten. Probier nochmal!'); stopListening(); }
+  try {
+    if (!SR) {
+      setBubble('Sprache nicht unterstützt. Tipp lieber!');
+      openTextInput();
+      return;
+    }
+    if (isListening) {
+      if (recognition) try { recognition.stop(); } catch (e) {}
+      return;
+    }
+    if (synth) synth.cancel();
+    const robot = document.getElementById('robot');
+    if (robot) robot.classList.remove('talking');
+    try { recognition.start(); startListening(); }
+    catch (err) { setBubble('Konnte nicht starten. Probier nochmal!'); stopListening(); }
+  } catch (e) {
+    console.error('[toggleListen]', e.message);
+  }
 }
 
 function startListening() {
@@ -2044,6 +2077,19 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.log('SW error:', err));
   });
 }
+
+// ════════════════════════════════════════
+// GLOBALER ERROR HANDLER - Fehler abfangen
+// ════════════════════════════════════════
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+  console.error('[Global Error]', msg);
+  return false; // Don't suppress error
+};
+
+window.addEventListener('unhandledrejection', event => {
+  console.error('[Unhandled Promise]', event.reason);
+});
+
 </script>
 </body>
 </html>
