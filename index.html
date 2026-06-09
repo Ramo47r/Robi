@@ -1039,14 +1039,14 @@ let lastRobiText = '';
 let starCount = parseInt(localStorage.getItem('robi_stars') || '0');
 
 const AGE_GROUPS = {
-  // 🎯 KOMPLETT MENSCHLICH: Natürliches Sprechtempo, klare Aussprache, zero roboterhaft!
-  '1-3':  { label: '🍼 1-3 Jahre',  rate: 0.90, pitch: 1.15,
+  // 🎯 NATÜRLICH & KLAR: Wie die freundliche ChatGPT-Frauenstimme — kein Roboter!
+  '1-3':  { label: '🍼 1-3 Jahre',  rate: 0.88, pitch: 1.0,
              greeting: 'Hallo mein Schatz! Ich bin Robi! Schön dass du da bist!' },
-  '4-6':  { label: '🎈 4-6 Jahre',  rate: 0.95, pitch: 1.10,
+  '4-6':  { label: '🎈 4-6 Jahre',  rate: 0.92, pitch: 1.0,
              greeting: 'Hallo! Ich bin Robi, dein Freund! Was machen wir heute?' },
-  '7-9':  { label: '🎒 7-9 Jahre',  rate: 1.00, pitch: 1.05,
+  '7-9':  { label: '🎒 7-9 Jahre',  rate: 0.95, pitch: 1.0,
              greeting: 'Hi! Ich bin Robi! Worauf hast du heute Lust?' },
-  '10-12':{ label: '🎮 10-12 Jahre', rate: 1.05, pitch: 1.00,
+  '10-12':{ label: '🎮 10-12 Jahre', rate: 0.98, pitch: 1.0,
              greeting: 'Hey! Ich bin Robi. Was wollen wir heute machen?' },
 };
 
@@ -1495,8 +1495,8 @@ const synth = window.speechSynthesis;
 let voices = [];
 let selectedVoice = null;
 // 🎯 KOMPLETT MENSCHLICH: Natürliches, klares Sprechen
-let speechRate = 0.95;    // ← Natürliches, entspanntes Sprechtempo (wie ein echter Mensch)
-let speechPitch = 1.05;   // ← Normale Tonhöhe (nicht künstlich erhöht!)
+let speechRate = 0.95;    // ← Natürliches Sprechtempo (wie echter Mensch)
+let speechPitch = 1.0;    // ← Neutrale Tonhöhe = kein Roboter-Sound!
 
 function loadVoices() {
   if (!synth) return;
@@ -1515,22 +1515,28 @@ function loadVoices() {
   
   // Priorisierung je nach Device
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const preferredNames = isMobile 
+  // 🎯 STIMMEN-PRIORITÄT:
+  // Microsoft Katja (Windows) = sehr natürlich
+  // Google Deutsch (Android)  = klar & sauber
+  // Anna (macOS/iOS)          = natürlich auf Apple
+  const preferredNames = isMobile
     ? [
-        'Google Deutsch',        // 🥇 Android Chrome — beste Qualität!
+        'Google Deutsch',        // 🥇 Android — beste Klarheit
+        'Microsoft Katja',       // Windows Mobile
+        'Anna',                  // Apple iOS
+        'Hanna', 'Microsoft Hanna',
         'Microsoft Clara',
         'Microsoft Zira',
-        'Hanna', 'Microsoft Hanna',
-        'Katja', 'Microsoft Katja',
-        'Anna', 'Hedda',
+        'Hedda',
       ]
     : [
+        'Microsoft Katja',       // 🥇 Windows Desktop — sehr natürlich!
+        'Anna',                  // 🥈 macOS — klar & warm
+        'Google Deutsch',        // 🥉 Chrome
         'Microsoft Clara',
-        'Google Deutsch',
-        'Microsoft Zira',
         'Hanna', 'Microsoft Hanna',
-        'Katja', 'Microsoft Katja',
-        'Anna', 'Hedda',
+        'Microsoft Zira',
+        'Hedda',
       ];
   
   let bestIdx = 0;
@@ -1550,18 +1556,18 @@ function loadVoices() {
 }
 
 if (synth) {
-  if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
-  loadVoices();
-  setTimeout(loadVoices, 500);
-}
+  if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+  loadVoices();
   setTimeout(loadVoices, 100);
   setTimeout(loadVoices, 300);
+  setTimeout(loadVoices, 500);
   setTimeout(loadVoices, 1500);
   if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
     setTimeout(loadVoices, 200);
     setTimeout(loadVoices, 800);
     setTimeout(loadVoices, 2500);
   }
+}
 
 function onVoiceChange() {
   const idx = parseInt(document.getElementById('voiceSel').value);
@@ -1631,28 +1637,29 @@ function speak(text) {
   // 🎯 MOBILE-OPTIMIERT: Langsamer für bessere Verständlichkeit!
   
   const isMobileMode = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  let pitch = 1.0;         // Normale, natürliche Stimmlage (nicht künstlich!)
-  let rate = isMobileMode ? 0.85 : 0.95;  // Mobile: Langsamer für Klarheit! Desktop: Normal
-                           // Mobile: 0.85 = kristallklare Aussprache
-                           // Desktop: 0.95 = natürlich & flüssig
+  // 🎯 MAXIMALE NATÜRLICHKEIT: Pitch 1.0 = kein Roboter-Effekt!
+  // Rate leicht unter 1.0 = entspanntes, klares Sprechen wie ChatGPT-Frauenstimme
+  let pitch = 1.0;         // Neutral = keine künstliche Verzerrung → klingt menschlich!
+  let rate = isMobileMode ? 0.88 : 0.95;  // Mobile etwas langsamer für Klarheit
 
   // MOOD-Anpassungen - SEHR subtil (nur 0.02-0.05 Variation!)
+  // Subtile Mood-Anpassungen — Pitch bleibt nahe 1.0 für maximale Natürlichkeit!
   if (currentMood === 'sad' || currentMood === 'tired') {
-    pitch = 0.98;         // Kaum merkbar tiefer (einfühlsam)
-    rate = Math.max(isMobileMode ? 0.80 : 0.85, rate - 0.07);  // Noch langsamer
+    pitch = 0.98;
+    rate = Math.max(isMobileMode ? 0.82 : 0.88, rate - 0.05);
   } else if (currentMood === 'excited' || currentMood === 'happy') {
-    pitch = 1.03;         // Kaum merkbar höher (lebendig)
-    rate = Math.min(isMobileMode ? 0.90 : 1.02, rate + 0.02);  // Mobile: max 0.90
+    pitch = 1.02;
+    rate = Math.min(isMobileMode ? 0.93 : 1.00, rate + 0.03);
   }
 
   // KEYWORD-Anpassungen - Kaum merkbar!
   if (hasPraise) {
-    pitch = Math.min(1.05, pitch + 0.03);  // Sehr subtil
-    rate = Math.min(isMobileMode ? 0.92 : 1.03, rate + 0.02);  // Mobile: max 0.92
+    pitch = Math.min(1.03, pitch + 0.02);  // Kaum merkbar — kein Roboter-Effekt!
+    rate = Math.min(isMobileMode ? 0.93 : 1.00, rate + 0.02);
   }
   if (hasComfort) {
-    pitch = Math.max(0.97, pitch - 0.03);  // Sehr subtil
-    rate = Math.max(isMobileMode ? 0.80 : 0.88, rate - 0.02);  // Mobile: min 0.80
+    pitch = Math.max(0.98, pitch - 0.02);
+    rate = Math.max(isMobileMode ? 0.82 : 0.90, rate - 0.02);
   }
 
   // FRAGEN: Ganz natürlicher Anstieg
