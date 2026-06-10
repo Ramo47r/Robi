@@ -1585,219 +1585,133 @@ function testVoice() { speak('Hallo! Ich bin Robi, dein Roboter-Freund!'); }
 
 
 // ════════════════════════════════════════════════════════════════
-// ULTIMATE BUDDY.AI-STYLE SPEECH SYNTHESIS
-// 🎯 Fließend, lebendig, herzlich — wie ein echter Roboter-Freund!
+// SPEECH SYNTHESIS — Fließend, menschlich, wie eine Pädagogin 💙
+// Kein Chunking → kein Stottern. Ein einziger Utterance pro Text.
+// Chrome-Freeze-Fix via keepAlive-Heartbeat.
 // ════════════════════════════════════════════════════════════════
 
-function speak(text) {
-  // ════════════════════════════════════════════════════════════════
-  // BUDDY.AI-STYLE: Warm, sanft, herzlich für ALLE Kinder! 🤖💙
-  // ════════════════════════════════════════════════════════════════
-  
-  if (!text || !window.speechSynthesis) return;
-  
-  // Falls gerade noch gesprochen wird, abbrechen
-  window.speechSynthesis.cancel();
+// Chrome/Android Bug: speechSynthesis friert nach ~15s ein → Heartbeat dagegen
+let _ttsKeepAlive = null;
+function _startKeepAlive() {
+  _stopKeepAlive();
+  _ttsKeepAlive = setInterval(() => {
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.pause();
+      window.speechSynthesis.resume();
+    } else {
+      _stopKeepAlive();
+    }
+  }, 10000);
+}
+function _stopKeepAlive() {
+  if (_ttsKeepAlive) { clearInterval(_ttsKeepAlive); _ttsKeepAlive = null; }
+}
 
-  // ────────────────────────────────────────
-  // TEXT SÄUBERN: Natürlichere Aussprache
-  // ────────────────────────────────────────
+function speak(text) {
+  if (!text || !window.speechSynthesis) return;
+
+  // Laufendes Sprechen sofort stoppen
+  window.speechSynthesis.cancel();
+  _stopKeepAlive();
+
+  // ── Text säubern: Emojis entfernen, natürlichere Aussprache ──
   const cleanText = Array.from(text)
     .filter(ch => {
       const cp = ch.codePointAt(0);
+      // Behalte normale Zeichen, entferne Emoji-Bereiche
       return cp < 0x2600 || (cp > 0x27FF && cp < 0x1F300) || cp > 0x1FFFF;
     })
     .join('')
-    .replace(/  +/g, ' ')           // Mehrere Leerzeichen → eins
-    .replace(/([a-z])-([a-z])/gi, '$1 $2')  // Bindestriche → Leerzeichen (für natürlichere Aussprache)
+    .replace(/  +/g, ' ')
+    .replace(/([a-z])-([a-z])/gi, '$1 $2')
     .trim();
 
   if (!cleanText) return;
 
-  // ────────────────────────────────────────
-  // BUDDY-EMOTIONS-FILTER: Keyword-Trigger
-  // ────────────────────────────────────────
+  // ── Basis-Parameter: Natürlich, klar, genderneutral ──
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  // Rate: 0.90-0.95 = entspannt, deutlich, gut verständlich (kein Gehetz, kein Roboter)
+  // Pitch: 1.0 = natürliche Stimmhöhe, genderneutral
+  let rate = isMobile ? 0.88 : 0.92;
+  let pitch = 1.0;  // GENDERNEUTRAL — exakt 1.0, keine Verfremdung
+
+  // Sehr subtile Anpassungen je nach Stimmung — kaum merklich
   const lowerText = cleanText.toLowerCase();
-  
-  // Lob-Wörter: Begeisterung 🎉
-  const praiseWords = ['super', 'toll', 'klasse', 'wow', 'perfekt', 'fantastisch', 'wunderbar', 'großartig', 'prima', 'ausgezeichnet', 'genial', 'hervorragend'];
-  const hasPraise = praiseWords.some(word => lowerText.includes(word));
-  
-  // Tröst-Wörter: Mitgefühl 💙
-  const comfortWords = ['schade', 'ooh', 'fast', 'probier', 'versuch', 'lass mich', 'keine sorge', 'mach dir nichts', 'nicht schlimm', 'ok lass', 'versuch nochmal', 'beim nächsten mal'];
-  const hasComfort = comfortWords.some(word => lowerText.includes(word));
-  
-  // Fragen: Melodischer Anstieg
-  const isQuestion = cleanText.trim().endsWith('?') || lowerText.includes('warum') || lowerText.includes('wie') || lowerText.includes('meinst du') || lowerText.includes('möchtest du');
+  const hasPraise   = /super|toll|klasse|wow|perfekt|fantastisch|wunderbar|großartig|prima|bravo/.test(lowerText);
+  const hasComfort  = /schade|keine sorge|nicht schlimm|probier|versuch|fast geschafft|geschafft/.test(lowerText);
+  const isQuestion  = cleanText.trim().endsWith('?');
 
-  // ────────────────────────────────────────
-  // BASIS-WERTE: Natürlich, klar, sehr menschlich
-  // ────────────────────────────────────────
-  // 🎯 SEHR MENSCHLICH: Wie echte menschliche Konversation
-  // 🎯 MOBILE-OPTIMIERT: Langsamer für bessere Verständlichkeit!
-  
-  const isMobileMode = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  // 🎯 MAXIMALE NATÜRLICHKEIT: Pitch 1.0 = kein Roboter-Effekt!
-  // Rate leicht unter 1.0 = entspanntes, klares Sprechen wie ChatGPT-Frauenstimme
-  let pitch = 1.0;         // Neutral = keine künstliche Verzerrung → klingt menschlich!
-  let rate = isMobileMode ? 0.88 : 0.95;  // Mobile etwas langsamer für Klarheit
-
-  // MOOD-Anpassungen - SEHR subtil (nur 0.02-0.05 Variation!)
-  // Subtile Mood-Anpassungen — Pitch bleibt nahe 1.0 für maximale Natürlichkeit!
+  // Stimmungs-Anpassungen: sehr minimal für natürlichen Klang
   if (currentMood === 'sad' || currentMood === 'tired') {
-    pitch = 0.98;
-    rate = Math.max(isMobileMode ? 0.82 : 0.88, rate - 0.05);
+    rate  = Math.max(isMobile ? 0.82 : 0.84, rate - 0.05);  // Etwas langsamer, nicht roboterhaft
+    pitch = 0.99;  // Kaum erkennbar tiefer, bleibt natürlich
   } else if (currentMood === 'excited' || currentMood === 'happy') {
-    pitch = 1.02;
-    rate = Math.min(isMobileMode ? 0.93 : 1.00, rate + 0.03);
+    rate  = Math.min(isMobile ? 0.93 : 0.96, rate + 0.02);  // Leicht schneller, aber flüssig
+    pitch = 1.01;  // Minimal höher, natürlich
+  }
+  if (hasPraise)  { rate = Math.min(isMobile ? 0.94 : 0.97, rate + 0.01); pitch = Math.min(1.01, pitch); }
+  if (hasComfort) { rate = Math.max(isMobile ? 0.84 : 0.86, rate - 0.01); pitch = Math.max(0.99, pitch); }
+  if (isQuestion) { pitch = Math.min(1.00, pitch + 0.005); }  // Kaum merklich höher bei Fragen
+
+  // ── Stimme auswählen: Genderneutral & natürlich klingend ──
+  let voice = selectedVoice;
+  if (!voice && voices && voices.length > 0) {
+    // Priorität: Google (hochwertig) > Microsoft Zira/Hanna (neutral) > lokale System-Stimmen
+    const priority = [
+      'Google Deutsch', 'Google Deutsch (Deutschland)',
+      'Microsoft Zira', 'Microsoft Hanna',
+      'Anna', 'Hanna',
+      'Katja'
+    ];
+    for (const name of priority) {
+      const found = voices.find(v => v.name.includes(name));
+      if (found) { voice = found; break; }
+    }
+    // Fallback: lokale deutsche Stimme
+    if (!voice) {
+      const localVoice = voices.find(v => v.lang.startsWith('de') && v.localService);
+      if (localVoice) voice = localVoice;
+    }
+    if (!voice) voice = voices.find(v => v.lang.startsWith('de')) || voices[0];
+  }
+  // Letzter Fallback: frische Stimmen holen
+  if (!voice) {
+    const fresh = window.speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('de'));
+    if (fresh.length > 0) voice = fresh[0];
   }
 
-  // KEYWORD-Anpassungen - Kaum merkbar!
-  if (hasPraise) {
-    pitch = Math.min(1.03, pitch + 0.02);  // Kaum merkbar — kein Roboter-Effekt!
-    rate = Math.min(isMobileMode ? 0.93 : 1.00, rate + 0.02);
-  }
-  if (hasComfort) {
-    pitch = Math.max(0.98, pitch - 0.02);
-    rate = Math.max(isMobileMode ? 0.82 : 0.90, rate - 0.02);
-  }
+  // ── KEIN CHUNKING — alles in EINEM Utterance → flüssig, natürlich, ohne Stottern ──
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  utterance.lang   = 'de-DE';
+  utterance.volume = 1.0;
+  utterance.rate   = rate;      // Natürliche Sprechgeschwindigkeit (nicht roboterhaft)
+  utterance.pitch  = pitch;     // Neutral (genderneutral)
+  if (voice) utterance.voice = voice;
 
-  // FRAGEN: Ganz natürlicher Anstieg
-  if (isQuestion) {
-    pitch = Math.min(1.04, pitch + 0.02);  // Sehr minimal
-  }
-  
-  console.log(`[speak] Mobile: ${isMobileMode}, Rate: ${rate.toFixed(2)}, Pitch: ${pitch.toFixed(2)}`);
+  console.log(`[speak] Stimme: ${voice?.name || 'default'} (Genderneutral), Rate: ${rate.toFixed(2)}, Pitch: ${pitch.toFixed(2)}, Text: ${cleanText.substring(0, 50)}`);
 
-  // ────────────────────────────────────────
-  // INTELLIGENTES CHUNKING: Fließend & ChatGPT-ähnlich!
-  // ────────────────────────────────────────
-  const chunks = [];
-  
-  // Nur bei SEHR langen Texten aufteilen (>350 Zeichen) - für mehr Fluss!
-  if (cleanText.length > 350 && /[.!?]/.test(cleanText)) {
-    const sentences = cleanText.match(/[^.!?]+[.!?]+/g) || [cleanText];
-    let currentChunk = '';
-    
-    sentences.forEach(sent => {
-      // Längere Chunks erlauben (bis 280 Zeichen) - für natürlichere Satz-Gruppen
-      if (currentChunk.length + sent.length < 280) {
-        currentChunk += (currentChunk ? ' ' : '') + sent;
-      } else {
-        if (currentChunk) chunks.push(currentChunk.trim());
-        currentChunk = sent;
-      }
-    });
-    if (currentChunk) chunks.push(currentChunk.trim());
-  } else {
-    // DEFAULT: Spreche den gesamten Text am Stück! ✅
-    chunks.push(cleanText);
-  }
-
-  // ────────────────────────────────────────
-  // SPRECHEN: Mit optimiertem Queue
-  // ────────────────────────────────────────
   const robot = document.getElementById('robot');
   if (robot) robot.classList.add('talking');
 
-  let chunkIdx = 0;
+  utterance.onstart = () => {
+    _startKeepAlive();
+  };
 
-  function speakNextChunk() {
-    if (chunkIdx >= chunks.length) {
-      if (robot) robot.classList.remove('talking');
-      return;
-    }
+  utterance.onend = () => {
+    _stopKeepAlive();
+    if (robot) robot.classList.remove('talking');
+  };
 
-    const chunk = chunks[chunkIdx];
-    const isLastChunk = chunkIdx === chunks.length - 1;
-    const isQuestionChunk = chunk.trim().endsWith('?') || (isQuestion && isLastChunk);
-    const isExclamationChunk = chunk.trim().endsWith('!');
+  utterance.onerror = (event) => {
+    _stopKeepAlive();
+    if (robot) robot.classList.remove('talking');
+    console.warn('[speak] TTS Fehler:', event.error);
+  };
 
-    const utterance = new SpeechSynthesisUtterance(chunk);
-    
-    // ───────────────────────────────────────
-    // VOICE SELECTION: Beste deutsche Stimme für Mobile optimiert
-    // 🎯 MOBILE-OPTIMIERT: Klarste Stimme wählen!
-    // ───────────────────────────────────────
-    
-    // Nutze globale voices Liste (wird bei init geladen)
-    let chunkVoice = null;
-    
-    // Bei Mobile: Bevorzuge Google Deutsch über alles
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    if (isMobile) {
-      // 🎯 MOBILE PRIORITÄT: Google Deutsch ist die einzige klare Stimme!
-      const googleDeutsch = voices.find(v => v.name.includes('Google Deutsch'));
-      if (googleDeutsch) {
-        chunkVoice = googleDeutsch;
-        console.log('[speak-mobile] Google Deutsch ausgewählt');
-      }
-    }
-    
-    // Fallback wenn nicht Mobile oder Google nicht gefunden
-    if (!chunkVoice && voices && voices.length > 0) {
-      chunkVoice = voices[0];  // Globale Stimme verwenden
-    }
-    
-    // Wenn immer noch nichts - hole frische Stimmen
-    if (!chunkVoice) {
-      const freshVoices = window.speechSynthesis.getVoices();
-      const germanVoices = freshVoices.filter(v => v.lang.toLowerCase().startsWith('de'));
-      if (germanVoices.length > 0) {
-        chunkVoice = germanVoices[0];
-      }
-    }
-    
-    if (chunkVoice) {
-      utterance.voice = chunkVoice;
-      console.log('[speak] Stimme:', chunkVoice.name);
-    }
-
-    // ───────────────────────────────────────
-    // MELODISCHE EXPRESSION: Warm & Herzlich
-    // ───────────────────────────────────────
-    utterance.lang = 'de-DE';
-    utterance.volume = 1.0;
-    
-    // Warme, natürliche Grundeinstellungen
-    utterance.pitch = pitch;
-    utterance.rate = rate;
-
-    // Expression je nach Satztyp - SEHR subtil & natürlich (kein Roboter!)
-    let expressionPitch = pitch;
-    let expressionRate = rate;
-
-    if (isQuestionChunk) {
-      expressionPitch = Math.min(1.02, pitch + 0.01);  // Kaum merkbar höher
-    }
-    if (isExclamationChunk) {
-      expressionPitch = Math.min(1.03, pitch + 0.02);  // Kaum höher
-      expressionRate = Math.min(1.00, rate + 0.01);    // Kaum schneller
-    }
-
-    utterance.pitch = expressionPitch;
-    utterance.rate = expressionRate;
-
-    // ───────────────────────────────────────
-    // QUEUE-MANAGEMENT: Natürlich & fließend!
-    // ───────────────────────────────────────
-    utterance.onend = () => {
-      chunkIdx++;
-      // Sehr minimale Pausen (wie echter Mensch) - für natürliche Konversation
-      const pauseMs = chunks.length > 1 && !isLastChunk ? 100 : 0;
-      setTimeout(speakNextChunk, pauseMs);
-    };
-
-    utterance.onerror = (event) => {
-      console.warn('Speech error:', event.error);
-      if (robot) robot.classList.remove('talking');
-    };
-
+  // Kurze Verzögerung nach cancel() damit Browser bereit ist
+  setTimeout(() => {
     window.speechSynthesis.speak(utterance);
-  }
-
-  speakNextChunk();
+  }, 50);
 }
 
 
