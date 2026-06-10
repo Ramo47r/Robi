@@ -1591,127 +1591,126 @@ function testVoice() { speak('Hallo! Ich bin Robi, dein Roboter-Freund!'); }
 // ════════════════════════════════════════════════════════════════
 
 // Chrome/Android Bug: speechSynthesis friert nach ~15s ein → Heartbeat dagegen
-let _ttsKeepAlive = null;
-function _startKeepAlive() {
-  _stopKeepAlive();
-  _ttsKeepAlive = setInterval(() => {
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.pause();
-      window.speechSynthesis.resume();
-    } else {
-      _stopKeepAlive();
-    }
-  }, 10000);
-}
-function _stopKeepAlive() {
-  if (_ttsKeepAlive) { clearInterval(_ttsKeepAlive); _ttsKeepAlive = null; }
-}
-
+// ════════════════════════════════════════
+// TEXT-TO-SPEECH: Kindlich, Flüssig & Menschlich
+// ════════════════════════════════════════
 function speak(text) {
   if (!text || !window.speechSynthesis) return;
 
-  // Laufendes Sprechen sofort stoppen
+  // Stoppe laufendes Sprechen
   window.speechSynthesis.cancel();
-  _stopKeepAlive();
 
-  // ── Text säubern: Emojis entfernen, natürlichere Aussprache ──
-  const cleanText = Array.from(text)
-    .filter(ch => {
-      const cp = ch.codePointAt(0);
-      // Behalte normale Zeichen, entferne Emoji-Bereiche
-      return cp < 0x2600 || (cp > 0x27FF && cp < 0x1F300) || cp > 0x1FFFF;
-    })
-    .join('')
-    .replace(/  +/g, ' ')
-    .replace(/([a-z])-([a-z])/gi, '$1 $2')
+  // Emojis und Sonderzeichen entfernen
+  const cleanText = String(text)
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
+    .replace(/\s+/g, ' ')
     .trim();
 
   if (!cleanText) return;
 
-  // ── Basis-Parameter: Natürlich, klar, genderneutral ──
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  // Rate: 0.90-0.95 = entspannt, deutlich, gut verständlich (kein Gehetz, kein Roboter)
-  // Pitch: 1.0 = natürliche Stimmhöhe, genderneutral
-  let rate = isMobile ? 0.88 : 0.92;
-  let pitch = 1.0;  // GENDERNEUTRAL — exakt 1.0, keine Verfremdung
-
-  // Sehr subtile Anpassungen je nach Stimmung — kaum merklich
-  const lowerText = cleanText.toLowerCase();
-  const hasPraise   = /super|toll|klasse|wow|perfekt|fantastisch|wunderbar|großartig|prima|bravo/.test(lowerText);
-  const hasComfort  = /schade|keine sorge|nicht schlimm|probier|versuch|fast geschafft|geschafft/.test(lowerText);
-  const isQuestion  = cleanText.trim().endsWith('?');
-
-  // Stimmungs-Anpassungen: sehr minimal für natürlichen Klang
-  if (currentMood === 'sad' || currentMood === 'tired') {
-    rate  = Math.max(isMobile ? 0.82 : 0.84, rate - 0.05);  // Etwas langsamer, nicht roboterhaft
-    pitch = 0.99;  // Kaum erkennbar tiefer, bleibt natürlich
-  } else if (currentMood === 'excited' || currentMood === 'happy') {
-    rate  = Math.min(isMobile ? 0.93 : 0.96, rate + 0.02);  // Leicht schneller, aber flüssig
-    pitch = 1.01;  // Minimal höher, natürlich
+  // Finde beste deutsche Stimme (genderneutral & jugendlich)
+  function getBestGermanVoice() {
+    const allVoices = window.speechSynthesis.getVoices();
+    
+    // Priorität: Stimmen, die jugendlich/natürlich klingen
+    // Google Deutsch bevorzugen (hochwertig & natürlich)
+    let voice = allVoices.find(v => v.lang.startsWith('de') && v.name.includes('Google'));
+    if (voice) return voice;
+    
+    // Microsoft Zira - natürlich & jugendlich
+    voice = allVoices.find(v => v.lang.startsWith('de') && v.name.includes('Zira'));
+    if (voice) return voice;
+    
+    // Lokale Stimmen (oft natürlicher)
+    voice = allVoices.find(v => v.lang.startsWith('de') && v.localService);
+    if (voice) return voice;
+    
+    // Jede deutsche Stimme
+    voice = allVoices.find(v => v.lang.startsWith('de'));
+    if (voice) return voice;
+    
+    // Fallback
+    return allVoices[0] || null;
   }
-  if (hasPraise)  { rate = Math.min(isMobile ? 0.94 : 0.97, rate + 0.01); pitch = Math.min(1.01, pitch); }
-  if (hasComfort) { rate = Math.max(isMobile ? 0.84 : 0.86, rate - 0.01); pitch = Math.max(0.99, pitch); }
-  if (isQuestion) { pitch = Math.min(1.00, pitch + 0.005); }  // Kaum merklich höher bei Fragen
 
-  // ── Stimme auswählen: Genderneutral & natürlich klingend ──
-  let voice = selectedVoice;
-  if (!voice && voices && voices.length > 0) {
-    // Priorität: Google (hochwertig) > Microsoft Zira/Hanna (neutral) > lokale System-Stimmen
-    const priority = [
-      'Google Deutsch', 'Google Deutsch (Deutschland)',
-      'Microsoft Zira', 'Microsoft Hanna',
-      'Anna', 'Hanna',
-      'Katja'
-    ];
-    for (const name of priority) {
-      const found = voices.find(v => v.name.includes(name));
-      if (found) { voice = found; break; }
+  // Berechne Sprachparameter für kindliche, flüssige Aussprache
+  function getVoiceParams() {
+    const isMobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent);
+    
+    // KINDLICH & FLÜSSIG:
+    // - Rate: 0.78-0.82 = langsam, deutlich, aber SEHR flüssig (nicht gehackt)
+    // - Pitch: 1.05-1.10 = jugendlich & hell (aber natürlich, nicht piepsig)
+    let rate = isMobile ? 0.76 : 0.78;  // Sehr langsam & flüssig
+    let pitch = 1.08;  // Kindlich & natürlich (nicht zu hoch)
+
+    // Emotionen = KINDLICHE Reaktionen
+    const lower = cleanText.toLowerCase();
+    
+    // Fragen: Neugierig, höher & schneller
+    if (cleanText.trim().endsWith('?')) {
+      pitch = 1.12;  // Deutlich höher (neugierig)
+      rate = Math.min(rate + 0.03, isMobile ? 0.80 : 0.82);  // Ein bisschen schneller
     }
-    // Fallback: lokale deutsche Stimme
-    if (!voice) {
-      const localVoice = voices.find(v => v.lang.startsWith('de') && v.localService);
-      if (localVoice) voice = localVoice;
+    // Freude/Erfolg: SUPER GLÜCKLICH (kindlich begeistert)
+    else if (/super|toll|klasse|perfekt|fantastisch|großartig|bravo|wunderbar|hurra|yay|prima/i.test(lower)) {
+      rate = Math.min(rate + 0.04, isMobile ? 0.83 : 0.85);  // Deutlich schneller
+      pitch = 1.14;  // Viel höher (begeistert!)
     }
-    if (!voice) voice = voices.find(v => v.lang.startsWith('de')) || voices[0];
-  }
-  // Letzter Fallback: frische Stimmen holen
-  if (!voice) {
-    const fresh = window.speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().startsWith('de'));
-    if (fresh.length > 0) voice = fresh[0];
+    // Trost/Beruhigung: Warm, langsam, beruhigend
+    else if (/schade|keine sorge|nicht schlimm|probier|versuch|fast geschafft|du schaffst|beruhig|tröst/i.test(lower)) {
+      rate = Math.max(rate - 0.04, isMobile ? 0.72 : 0.74);  // Langsamer & warm
+      pitch = 1.05;  // Ein bisschen weicher
+    }
+    // Traurigkeit
+    else if (/traurig|sad|müde|schläfrig|erschöpft/i.test(lower)) {
+      rate = Math.max(rate - 0.05, isMobile ? 0.70 : 0.72);  // Viel langsamer
+      pitch = 1.04;  // Weicher Ton
+    }
+    // Aufregung
+    else if (/aufregung|wow|krass|unglaublich|cooler/i.test(lower)) {
+      rate = Math.min(rate + 0.05, isMobile ? 0.84 : 0.86);  // Sehr schnell
+      pitch = 1.15;  // Sehr hoch (aufgeregt!)
+    }
+    
+    return { rate, pitch };
   }
 
-  // ── KEIN CHUNKING — alles in EINEM Utterance → flüssig, natürlich, ohne Stottern ──
+  // Erstelle und spreche Utterance mit FLÜSSIGER Aussprache
   const utterance = new SpeechSynthesisUtterance(cleanText);
-  utterance.lang   = 'de-DE';
-  utterance.volume = 1.0;
-  utterance.rate   = rate;      // Natürliche Sprechgeschwindigkeit (nicht roboterhaft)
-  utterance.pitch  = pitch;     // Neutral (genderneutral)
-  if (voice) utterance.voice = voice;
+  const params = getVoiceParams();
+  const voice = getBestGermanVoice();
 
-  console.log(`[speak] Stimme: ${voice?.name || 'default'} (Genderneutral), Rate: ${rate.toFixed(2)}, Pitch: ${pitch.toFixed(2)}, Text: ${cleanText.substring(0, 50)}`);
+  utterance.lang = 'de-DE';
+  utterance.rate = params.rate;
+  utterance.pitch = params.pitch;
+  utterance.volume = 1.0;
+  
+  // Für maximale Flüssigkeit
+  utterance.pauseUponEnd = false;  // Keine Pause nach dem Sprechen
+  
+  if (voice) {
+    utterance.voice = voice;
+  }
 
   const robot = document.getElementById('robot');
-  if (robot) robot.classList.add('talking');
 
   utterance.onstart = () => {
-    _startKeepAlive();
+    if (robot) robot.classList.add('talking');
+    console.log('[TTS] Kindliche Stimme: Rate ' + params.rate.toFixed(2) + ', Pitch ' + params.pitch.toFixed(2));
   };
 
   utterance.onend = () => {
-    _stopKeepAlive();
     if (robot) robot.classList.remove('talking');
+    console.log('[TTS] Fertig!');
   };
 
   utterance.onerror = (event) => {
-    _stopKeepAlive();
     if (robot) robot.classList.remove('talking');
-    console.warn('[speak] TTS Fehler:', event.error);
+    console.error('[TTS] Fehler:', event.error);
   };
 
-  // Kurze Verzögerung nach cancel() damit Browser bereit ist
-  setTimeout(() => {
-    window.speechSynthesis.speak(utterance);
-  }, 50);
+  // Flüssig sprechen
+  window.speechSynthesis.speak(utterance);
 }
 
 
