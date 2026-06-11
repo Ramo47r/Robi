@@ -1,15 +1,15 @@
-<!DOCTYPE html>
+F<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Liam – Dein Freund, der dich wirklich sieht 💜</title>
-<meta name="theme-color" content="#6b4dff">
+<title>Robi – Dein Roboter-Freund 🤖</title>
+<meta name="theme-color" content="#4ec3ff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Liam">
-<meta name="description" content="Liam ist dein empathischer Freund. Tiefgründig. Genderneutral. Immer da zum Zuhören.">
+<meta name="apple-mobile-web-app-title" content="Robi">
+<meta name="description" content="Robi ist dein freundlicher KI-Roboter-Freund für Kinder!">
 <link rel="manifest" href="/manifest.json">
 <!-- iOS icon (emoji rendered as SVG) -->
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%234ec3ff'/><text y='380' font-size='340' text-anchor='middle' x='256'>🤖</text></svg>">
@@ -1200,7 +1200,6 @@ function showAgeBubble(text) {
 }
 
 function speakOnAge(text, onDone) {
-  // Callback nur einmal aufrufen
   let isDone = false;
   function finishCallback() {
     if (isDone) return;
@@ -1208,46 +1207,58 @@ function speakOnAge(text, onDone) {
     if (onDone) onDone();
   }
 
-  if (!synth) { 
-    setTimeout(finishCallback, 500); 
-    return; 
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    
+    let cleanText = text.replace(/[*_:#🤖✨]/g, ' ');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'de-DE';
+    
+    // Geschwindigkeit leicht anpassen für freundlicheren Fluss
+    utterance.rate = typeof speechRate !== 'undefined' ? speechRate : 1.0;
+    utterance.pitch = 1.05; // Leicht angehoben für ein jüngeres Gefühl
+
+    // ALLE DEUTSCHEN STIMMEN HOLEN
+    const voices = window.speechSynthesis.getVoices();
+    const deVoices = voices.filter(v => v.lang.startsWith('de') || v.lang.startsWith('DE'));
+
+    if (deVoices.length > 0) {
+      // 1. VERSUCH: Suche nach bekannten, modernen & freundlichen Stimmen (Google, Natural, Premium, Anna)
+      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet'))
+                   || deVoices.find(v => v.name.includes('Premium') || v.name.includes('Anna') || v.name.includes('Amelie'))
+                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard')); // Google hat oft 5+ Stimmen
+                   
+      // 2. VERSUCH: Falls nichts davon gefunden wurde, nimm bewusst NICHT die Standardstimme (falls mehr als eine existiert)
+      if (!bestVoice && deVoices.length > 1) {
+        // Überspringe die allererste Stimme (deine aktuelle), nimm die zweite Variante
+        bestVoice = deVoices[1]; 
+      } else if (!bestVoice) {
+        // Letzter Ausweg: Die einzige deutsche Stimme, die da ist
+        bestVoice = deVoices[0];
+      }
+
+      if (bestVoice) {
+        utterance.voice = bestVoice;
+        console.log("Robi spricht jetzt mit Stimme:", bestVoice.name); // Zeigt im Hintergrund an, welche Stimme geladen wurde
+      }
+    }
+
+    utterance.onend = finishCallback;
+    utterance.onerror = finishCallback;
+    window.speechSynthesis.speak(utterance);
+  } else {
+    finishCallback();
   }
+}
 
-  synth.cancel();
-  const r = document.getElementById('ageRobot');
-  if (r) r.classList.add('talking');
-
-  const utter = new SpeechSynthesisUtterance(text);
-  if (selectedVoice) utter.voice = selectedVoice;
-  utter.lang = 'de-DE';
-  utter.rate = speechRate;
-  utter.pitch = speechPitch;
-  utter.volume = 1.0;
-
-  utter.onstart = () => {
-    console.log('[speakOnAge] Speech started');
-  };
-  
-  
-
-  utter.onend = () => { 
-    if (r) r.classList.remove('talking');
-    console.log('[speakOnAge] Speech finished');
-    finishCallback();
-  };
-
-  utter.onerror = (err) => { 
-    if (r) r.classList.remove('talking');
-    console.error('[speakOnAge] Speech error:', err?.error || 'Unbekannt');
-    finishCallback();
-  };
-
-  synth.speak(utter);
-
-  // Safety fallback: auf Mobile kann Audio blockiert sein
-  // Längere Wartezeit für vollständiges Sprechen
-  const estimatedMs = Math.max(2500, text.length * 75);
-  setTimeout(finishCallback, estimatedMs);
+// DIESER TEIL IST JETZT DOPPELT ABGESICHERT: Lädt die Stimmen sofort beim App-Start in den Speicher
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.getVoices(); // Erster erzwungener Aufruf
+  if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.getVoices();
+    };
+  }
 }
 
 // ════════════════════════════════════════
@@ -1594,164 +1605,42 @@ function testVoice() { speak('Hallo! Ich bin Robi, dein Roboter-Freund!'); }
 // ════════════════════════════════════════
 // TEXT-TO-SPEECH: Kindlich, Flüssig & Menschlich
 // ════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════
-// ROBI'S STIMME: ALLOY (OpenAI TTS Style - Clean, Natural, Fluid)
-// ═══════════════════════════════════════════════════════════════════════════
-
-const ROBI_ALLOY_CONFIG = {
-  voice: 'Alloy',
-  baseRate: 1.0,        // Natürliches Tempo (nicht zu schnell, nicht zu langsam)
-  basePitch: 1.0,       // Neutral & warm (nicht piepsig)
-  volume: 1.0
-};
-
 function speak(text) {
-  if (!text || !window.speechSynthesis) return;
+  if ('speechSynthesis' in window) {
+    // Vorheriges Sprechen sofort stoppen
+    window.speechSynthesis.cancel();
+    
+    // Text bereinigen
+    let cleanText = text.replace(/[*_:#🤖✨]/g, ' ');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'de-DE';
+    
+    // Tempo übernehmen, Tonhöhe freundlich und jung erzwingen
+    utterance.rate = typeof speechRate !== 'undefined' ? speechRate : 1.0;
+    utterance.pitch = 1.05; 
 
-  window.speechSynthesis.cancel();
+    // Beste verfügbare Stimme heraussuchen
+    const voices = window.speechSynthesis.getVoices();
+    const deVoices = voices.filter(v => v.lang.startsWith('de') || v.lang.startsWith('DE'));
 
-  const cleanText = String(text)
-    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+    if (deVoices.length > 0) {
+      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet'))
+                   || deVoices.find(v => v.name.includes('Premium') || v.name.includes('Anna') || v.name.includes('Amelie'))
+                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'));
+                   
+      if (!bestVoice && deVoices.length > 1) {
+        bestVoice = deVoices[1]; 
+      } else if (!bestVoice) {
+        bestVoice = deVoices[0];
+      }
 
-  if (!cleanText) return;
+      if (bestVoice) {
+        utterance.voice = bestVoice;
+      }
+    }
 
-  // Finde beste Stimme für Alloy-Sound (warm, natürlich, neutral)
-  function getAlloyVoice() {
-    const allVoices = window.speechSynthesis.getVoices();
-    
-    // 1. Google Deutsch (beste Qualität, Alloy-ähnlich)
-    let voice = allVoices.find(v => 
-      v.lang.startsWith('de') && v.name.includes('Google')
-    );
-    if (voice) return voice;
-    
-    // 2. Microsoft Zira/David (natürlich & warm)
-    voice = allVoices.find(v => 
-      v.lang.startsWith('de') && (v.name.includes('Zira') || v.name.includes('David'))
-    );
-    if (voice) return voice;
-    
-    // 3. System-Stimmen (natürlich)
-    voice = allVoices.find(v => v.lang.startsWith('de') && v.localService);
-    if (voice) return voice;
-    
-    // 4. Jede deutsche Stimme
-    voice = allVoices.find(v => v.lang.startsWith('de'));
-    if (voice) return voice;
-    
-    // 5. Fallback
-    return allVoices[0] || null;
+    window.speechSynthesis.speak(utterance);
   }
-
-  // Berechne Alloy-Parameter (sauber, flüssig, nicht gehackt)
-  function getAlloyParams() {
-    const lower = cleanText.toLowerCase();
-    
-    // Alloy Basiskonfiguration: natürliches, fließendes Tempo
-    let rate = ROBI_ALLOY_CONFIG.baseRate;
-    let pitch = ROBI_ALLOY_CONFIG.basePitch;
-
-    // Subtile emotionale Anpassungen (nicht übertrieben)
-    
-    // Fragen: leicht höher, neugierig
-    if (cleanText.trim().endsWith('?')) {
-      pitch = 1.05;
-      rate = 0.95;
-    }
-    // Freude: schneller, aber flüssig
-    else if (/super|toll|klasse|perfekt|fantastisch|großartig|bravo|wunderbar|hurra|yay|prima|schön|freut|glücklich/i.test(lower)) {
-      rate = 1.05;
-      pitch = 1.02;
-    }
-    // Beruhigung: warm & ruhig
-    else if (/schade|keine sorge|nicht schlimm|probier|versuch|fast geschafft|du schaffst|beruhig|tröst|verständnis|okay/i.test(lower)) {
-      rate = 0.95;
-      pitch = 0.98;
-    }
-    // Traurigkeit: mitfühlend & ruhig
-    else if (/traurig|sad|müde|schläfrig|erschöpft|niedergeschlagen|trauer/i.test(lower)) {
-      rate = 0.92;
-      pitch = 0.97;
-    }
-    // Aufregung: energisch, aber kontrolliert
-    else if (/aufregung|wow|krass|unglaublich|cooler|spannend|aufgeregt/i.test(lower)) {
-      rate = 1.08;
-      pitch = 1.03;
-    }
-    
-    return { rate, pitch };
-  }
-
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  const params = getAlloyParams();
-  const voice = getAlloyVoice();
-
-  utterance.lang = 'de-DE';
-  utterance.rate = params.rate;
-  utterance.pitch = params.pitch;
-  utterance.volume = ROBI_ALLOY_CONFIG.volume;
-  utterance.pauseUponEnd = false;
-  
-  if (voice) {
-    utterance.voice = voice;
-  }
-
-  const robot = document.getElementById('robot');
-
-  utterance.onstart = () => {
-    if (robot) robot.classList.add('talking');
-    console.log(`[Robi Alloy] Spreche flüssig... (Rate: ${params.rate}, Pitch: ${params.pitch})`);
-  };
-
-  utterance.onend = () => {
-    if (robot) robot.classList.remove('talking');
-  };
-
-  utterance.onerror = (event) => {
-    if (robot) robot.classList.remove('talking');
-    console.error('[TTS Error]', event.error);
-  };
-
-  window.speechSynthesis.speak(utterance);
-}
-
-
-function toggleListen() {
-  try {
-    if (!SR) {
-      setBubble('Sprache nicht unterstützt. Tipp lieber!');
-      openTextInput();
-      return;
-    }
-    if (isListening) {
-      if (recognition) try { recognition.stop(); } catch (e) {}
-      return;
-    }
-    if (synth) synth.cancel();
-    const robot = document.getElementById('robot');
-    if (robot) robot.classList.remove('talking');
-    try { recognition.start(); startListening(); }
-    catch (err) { setBubble('Konnte nicht starten. Probier nochmal!'); stopListening(); }
-  } catch (e) {
-    console.error('[toggleListen]', e.message);
-  }
-}
-
-function startListening() {
-  isListening = true;
-  document.getElementById('micBtn').classList.add('listening');
-  setHint('Ich höre dich... 👂');
-  const robot = document.getElementById('robot');
-  if (robot) { robot.classList.remove('excited','sad','tired'); robot.classList.add('listening'); }
-}
-function stopListening() {
-  isListening = false;
-  document.getElementById('micBtn').classList.remove('listening');
-  setHint('Drück das Mikro und sprich!');
-  const robot = document.getElementById('robot');
-  if (robot) robot.classList.remove('listening');
 }
 
 // ════════════════════════════════════════
@@ -1781,159 +1670,27 @@ document.getElementById('textInput').addEventListener('keydown', (e) => {
 // ════════════════════════════════════════
 // EMOTION DETECTION — Erkennt User-Gefühle
 // ════════════════════════════════════════
-// Veraltet: Nutze detectUserEmotionAdvanced stattdessen (siehe LIAM INTEGRATION)
-
-// ════════════════════════════════════════
-// LIAM INTEGRATION - TTS & VOICE OPTIMIZATION
-// ════════════════════════════════════════
-
-// Validiere Text auf genderneutrale Sprache (für TTS-Optimierung)
-function validateGenderNeutralLanguage(text) {
-  const genderMarkers = {
-    '/in': 'Nutze stattdessen: Lehrpersonen',
-    '\\*in': 'Nutze stattdessen: Studierende',
-    ':in': 'Nutze stattdessen: Mitarbeitende',
-  };
+function detectUserEmotion(text) {
+  const lower = text.toLowerCase();
   
-  let hasIssues = false;
-  Object.entries(genderMarkers).forEach(([marker, suggestion]) => {
-    if (text.includes(marker)) {
-      console.warn('[Liam Gender Check]', marker, '→', suggestion);
-      hasIssues = true;
-    }
-  });
+  // Trauer / Traurigkeit
+  const sadKeywords = ['traurig', 'trauer', 'weinen', 'bin nicht glücklich', 'geht mir schlecht', 
+                        'deprimiert', 'niedergeschlagen', 'unglücklich', 'hass', 'hasse', 
+                        'tut mir weh', 'verloren', 'vermisse', 'einsam', 'allein', 'einsamkeit'];
+  if (sadKeywords.some(kw => lower.includes(kw))) return 'sad';
   
-  return !hasIssues;
-}
-
-// Parse Text für natürliche Sprechweise (kurze Sätze, Pausen)
-function parseForSpeech(text) {
-  text = text.replace(/<[^>]*>/g, '').trim();
-  const sentences = text.match(/[^.!?]*[.!?]+/g) || [text];
+  // Freude / Aufregung
+  const happyKeywords = ['freude', 'glücklich', 'fröhlich', 'froh', 'begeistert', 'aufgeregt',
+                         'cool', 'super', 'toll', 'großartig', 'wunderbar', 'fantastisch', 'awesome',
+                         'jaaa', 'hurra', 'freut mich', 'freue mich', 'spaß', 'lachen', 'gelacht'];
+  if (happyKeywords.some(kw => lower.includes(kw))) return 'excited';
   
-  const chunks = [];
-  let currentChunk = '';
+  // Müdigkeit / Erschöpfung
+  const tiredKeywords = ['müde', 'müdigkeit', 'erschöpft', 'schläfrig', 'energielos', 'ausgelaugt',
+                         'fertig', 'am ende meiner kräfte', 'kaputt'];
+  if (tiredKeywords.some(kw => lower.includes(kw))) return 'tired';
   
-  sentences.forEach(sentence => {
-    const trimmed = sentence.trim();
-    if (!trimmed) return;
-    
-    if ((currentChunk + trimmed).split(' ').length > 15) {
-      if (currentChunk) chunks.push(currentChunk.trim());
-      currentChunk = trimmed;
-    } else {
-      currentChunk += ' ' + trimmed;
-    }
-  });
-  
-  if (currentChunk) chunks.push(currentChunk.trim());
-  return chunks;
-}
-
-// Optimierte Sprachausgabe mit Liams Persönlichkeit
-async function speakLiam(text) {
-  if (!text || !text.trim()) return;
-  
-  validateGenderNeutralLanguage(text);
-  const chunks = parseForSpeech(text);
-  const voice = getBestGermanVoice();
-  const robot = document.getElementById('robot');
-  
-  if (robot) robot.classList.add('talking');
-  
-  return new Promise(resolve => {
-    let chunkIndex = 0;
-    
-    function speakNext() {
-      if (chunkIndex >= chunks.length) {
-        if (robot) robot.classList.remove('talking');
-        resolve();
-        return;
-      }
-      
-      const utterance = new SpeechSynthesisUtterance(chunks[chunkIndex]);
-      utterance.lang = 'de-DE';
-      utterance.rate = speechRate || 0.95;
-      utterance.pitch = speechPitch || 1.0;
-      utterance.volume = 1.0;
-      
-      if (voice) utterance.voice = voice;
-      
-      utterance.onend = () => {
-        chunkIndex++;
-        setTimeout(speakNext, 800);
-      };
-      
-      utterance.onerror = (event) => {
-        console.error('[Liam TTS Error]', event.error);
-        chunkIndex++;
-        speakNext();
-      };
-      
-      window.speechSynthesis.speak(utterance);
-    }
-    
-    speakNext();
-  });
-}
-
-// Erkenne Emotion des Nutzers (erweiterte Version)
-function detectUserEmotionAdvanced(userText) {
-  const lower = userText.toLowerCase();
-  
-  const emotions = {
-    happy: ['freut', 'glücklich', 'toll', 'super', 'wunderbar', 'schön', 'lachen', 'erleichtert', 'prima', 'klasse'],
-    sad: ['traurig', 'niedergeschlagen', 'deprimiert', 'heulend', 'trauern', 'weinen', 'betrübt', 'mutlos'],
-    anxious: ['angst', 'nervös', 'besorgnis', 'angespannt', 'beängstigt', 'panik', 'stress', 'unsicher'],
-    frustrated: ['frustriert', 'wütend', 'sauer', 'entnervt', 'genervt', 'zornig', 'verständnislos'],
-    tired: ['müde', 'erschöpft', 'schläfrig', 'energielos', 'ausgelaugt', 'kaputt'],
-  };
-  
-  let maxScore = 0;
-  let detectedEmotion = 'normal';
-  
-  Object.entries(emotions).forEach(([emotion, keywords]) => {
-    const score = keywords.filter(kw => lower.includes(kw)).length;
-    if (score > maxScore) {
-      maxScore = score;
-      detectedEmotion = emotion;
-    }
-  });
-  
-  return detectedEmotion;
-}
-
-// Liam-Antworten basierend auf Emotion
-const liamEmotionalResponses = {
-  happy: {
-    greeting: 'Das freut mich zu hören. Deine Energie kommt an.',
-    follow: 'Das ist wunderbar. Erzähl mir mehr davon.'
-  },
-  sad: {
-    greeting: 'Ich sehe, dass es dir gerade nicht so gut geht.',
-    follow: 'Das ist okay. Deine Gefühle sind wichtig. Ich bin für dich da.'
-  },
-  anxious: {
-    greeting: 'Ich merke, dass dich etwas beunruhigt.',
-    follow: 'Das ist völlig normal. Lass uns das zusammen angehen.'
-  },
-  frustrated: {
-    greeting: 'Ich spüre, dass dich etwas frustriert.',
-    follow: 'Das ist berechtigt. Lass mich dir helfen, das zu sortieren.'
-  },
-  tired: {
-    greeting: 'Du klingst erschöpft. Das ist verständlich.',
-    follow: 'Dein Körper sagt dir, dass du Ruhe brauchst. Das ist wichtig.'
-  },
-  normal: {
-    greeting: 'Hallo. Ich bin Liam. Wie kann ich dir heute helfen?',
-    follow: 'Ich höre dir zu.'
-  }
-};
-
-function generateLiamGreeting(emotion) {
-  const response = liamEmotionalResponses[emotion] || liamEmotionalResponses.normal;
-  return response.greeting + ' ' + response.follow;
+  return 'normal';
 }
 
 // Setzt Robis emotionalen Zustand basierend auf User-Gefühle
@@ -1945,7 +1702,7 @@ function setRobiEmotion(emotion) {
   
   if (emotion === 'sad') {
     robot.classList.add('sad');
-  } else if (emotion === 'happy' || emotion === 'excited') {
+  } else if (emotion === 'excited') {
     robot.classList.add('excited');
   } else if (emotion === 'tired') {
     robot.classList.add('tired');
@@ -1956,12 +1713,12 @@ async function sendMessage(userText) {
   if (!userText || !userText.trim()) return;
   userText = userText.trim().slice(0, 500);
 
-  // *** LIAM: Erkenne die Emotion des Nutzers mit erweiterter Methode ***
-  const userEmotion = detectUserEmotionAdvanced(userText);
+  // *** Erkenne die Emotion des Nutzers ***
+  const userEmotion = detectUserEmotion(userText);
   setRobiEmotion(userEmotion);
 
   setBubble('Du: "' + userText + '"');
-  setHint('Liam denkt nach... 🤔');
+  setHint('Robi denkt nach... 🤔');
   setTimeout(setBubbleLoading, 800);
 
   messages.push({ role: 'user', content: userText });
@@ -1971,20 +1728,12 @@ async function sendMessage(userText) {
 
   try {
     console.log('[sendMessage] Sende Nachricht an /api/chat:', userText);
-    console.log('[sendMessage] Erkannte Emotion:', userEmotion);
     console.log('[sendMessage] Messages:', JSON.stringify(messages));
     
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        messages, 
-        mood: currentMood, 
-        mode: currentMode, 
-        age: currentAge, 
-        emotion: userEmotion,
-        liamMode: true  // Aktiviere Liam-Persönlichkeit
-      }),
+      body: JSON.stringify({ messages, mood: currentMood, mode: currentMode, age: currentAge, emotion: userEmotion }),
     });
     
     console.log('[sendMessage] Response Status:', res.status);
@@ -2011,18 +1760,13 @@ async function sendMessage(userText) {
     }
 
     const reply = data.reply || 'Hmm, mir fällt gerade nichts ein!';
-    console.log('[sendMessage] Liams Antwort:', reply);
-    
-    // Validiere auf genderneutrale Sprache vor Sprachausgabe
-    validateGenderNeutralLanguage(reply);
+    console.log('[sendMessage] Robis Antwort:', reply);
     
     messages.push({ role: 'assistant', content: reply });
     setBubble(reply);
     lastRobiText = reply;
     setHint('Drück das Mikro und sprich!');
-    
-    // LIAM: Nutze optimierte Sprachausgabe
-    await speakLiam(reply);
+    speak(reply);
     awardStar();
 
   } catch (err) {
