@@ -1039,13 +1039,13 @@ let lastRobiText = '';
 let starCount = parseInt(localStorage.getItem('robi_stars') || '0');
 
 const AGE_GROUPS = {
-  '1-3':  { label: '🍼 1-3 Jahre',  rate: 0.88, pitch: 1.0,
+  '1-3':  { label: '🍼 1-3 Jahre',  rate: 102, pitch: 1.22,
              greeting: 'Hallo mein Schatz! Ich bin Robi! Schön dass du da bist!' },
-  '4-6':  { label: '🎈 4-6 Jahre',  rate: 0.92, pitch: 1.08,
+  '4-6':  { label: '🎈 4-6 Jahre',  rate: 102, pitch: 1.22,
              greeting: 'Hallo! Ich bin Robi, dein Freund! Was machen wir heute?' },
-  '7-9':  { label: '🎒 7-9 Jahre',  rate: 0.95, pitch: 1.0,
+  '7-9':  { label: '🎒 7-9 Jahre',  rate: 1,02, pitch: 1.22,
              greeting: 'Hi! Ich bin Robi! Worauf hast du heute Lust?' },
-  '10-12':{ label: '🎮 10-12 Jahre', rate: 0.98, pitch: 1.0,
+  '10-12':{ label: '🎮 10-12 Jahre', rate: 1,02, pitch: 1.22,
              greeting: 'Hey! Ich bin Robi. Was wollen wir heute machen?' },
 };
 
@@ -1986,6 +1986,57 @@ function speakOnAge(text, onDone) {
 // ════════════════════════════════════════
 // SPRACHAUSGABE (HAUPTMENÜ / CHAT)
 // ════════════════════════════════════════
+// ════════════════════════════════════════
+// SPRACHAUSGABE (STARTMENÜ / BEGRÜSSUNG)
+// ════════════════════════════════════════
+function speakOnAge(text, onDone) {
+  let isDone = false;
+  function finishCallback() {
+    if (isDone) return;
+    isDone = true;
+    if (onDone) onDone();
+  }
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    
+    // Macht den Text flüssig und lässt Platz für echte Emotionen durch Satzzeichen
+    let cleanText = text.replace(/[*_:#🤖✨]/g, ' ').replace(/,/g, ', ');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'de-DE';
+    
+    // Nutzt die flüssigen Werte aus den Altersgruppen
+    utterance.rate = typeof speechRate !== 'undefined' ? speechRate : 1.0;
+    utterance.pitch = typeof speechPitch !== 'undefined' ? speechPitch : 1.05;
+
+    const voices = window.speechSynthesis.getVoices();
+    const deVoices = voices.filter(v => v.lang.startsWith('de') || v.lang.startsWith('DE'));
+
+    if (deVoices.length > 0) {
+      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet'))
+                   || deVoices.find(v => v.name.includes('Premium') || v.name.includes('Anna') || v.name.includes('Amelie'))
+                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'));
+                   
+      if (!bestVoice && deVoices.length > 1) {
+        bestVoice = deVoices[1]; 
+      } else if (!bestVoice) {
+        bestVoice = deVoices[0];
+      }
+
+      if (bestVoice) { utterance.voice = bestVoice; }
+    }
+
+    utterance.onend = finishCallback;
+    utterance.onerror = finishCallback;
+    window.speechSynthesis.speak(utterance);
+  } else {
+    finishCallback();
+  }
+}
+
+// ════════════════════════════════════════
+// SPRACHAUSGABE (HAUPTMENÜ / CHAT)
+// ════════════════════════════════════════
 function speak(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -1994,30 +2045,32 @@ function speak(text) {
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'de-DE';
     
-    if (typeof currentAge !== 'undefined' && AGE_GROUPS[currentAge]) {
-      utterance.rate = AGE_GROUPS[currentAge].rate;
-      utterance.pitch = AGE_GROUPS[currentAge].pitch;
-    } else {
-      utterance.rate = 1.0;
-      utterance.pitch = 1.05;
-    }
+    utterance.rate = typeof speechRate !== 'undefined' ? speechRate : 1.0;
+    utterance.pitch = typeof speechPitch !== 'undefined' ? speechPitch : 1.05; 
 
     const voices = window.speechSynthesis.getVoices();
     const deVoices = voices.filter(v => v.lang.startsWith('de') || v.lang.startsWith('DE'));
 
     if (deVoices.length > 0) {
-      // Dieselbe optimierte Smartphone-Suche auch für den Chat
-      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet') || v.name.includes('network'))
-                   || deVoices.find(v => v.name.includes('Verbessert') || v.name.includes('Enhanced') || v.name.includes('Premium'))
-                   || deVoices.find(v => v.name.includes('Siri') || v.name.includes('Anna') || v.name.includes('Amelie') || v.name.includes('Markus'))
-                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'))
-                   || deVoices[0];
+      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet'))
+                   || deVoices.find(v => v.name.includes('Premium') || v.name.includes('Anna') || v.name.includes('Amelie'))
+                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'));
                    
+      if (!bestVoice && deVoices.length > 1) {
+        bestVoice = deVoices[1]; 
+      } else if (!bestVoice) {
+        bestVoice = deVoices[0];
+      }
+
       if (bestVoice) { utterance.voice = bestVoice; }
     }
 
     window.speechSynthesis.speak(utterance);
   }
+}
+
+if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+  window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
 }
 // ════════════════════════════════════════
 // INIT
@@ -2030,6 +2083,93 @@ if (savedAge && AGE_GROUPS[savedAge]) {
   showScreen('main');
   // Show UI immediately — speak on first tap (browser audio policy)
   initMain();
+// ════════════════════════════════════════
+// SPRACHAUSGABE (STARTMENÜ / BEGRÜSSUNG)
+// ════════════════════════════════════════
+function speakOnAge(text, onDone) {
+  let isDone = false;
+  function finishCallback() {
+    if (isDone) return;
+    isDone = true;
+    if (onDone) onDone();
+  }
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    
+    // Macht den Text flüssig und lässt Platz für echte Emotionen durch Satzzeichen
+    let cleanText = text.replace(/[*_:#🤖✨]/g, ' ').replace(/,/g, ', ');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'de-DE';
+    
+    // Nutzt die flüssigen Werte aus den Altersgruppen
+    utterance.rate = typeof speechRate !== 'undefined' ? speechRate : 1.0;
+    utterance.pitch = typeof speechPitch !== 'undefined' ? speechPitch : 1.05;
+
+    const voices = window.speechSynthesis.getVoices();
+    const deVoices = voices.filter(v => v.lang.startsWith('de') || v.lang.startsWith('DE'));
+
+    if (deVoices.length > 0) {
+      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet'))
+                   || deVoices.find(v => v.name.includes('Premium') || v.name.includes('Anna') || v.name.includes('Amelie'))
+                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'));
+                   
+      if (!bestVoice && deVoices.length > 1) {
+        bestVoice = deVoices[1]; 
+      } else if (!bestVoice) {
+        bestVoice = deVoices[0];
+      }
+
+      if (bestVoice) { utterance.voice = bestVoice; }
+    }
+
+    utterance.onend = finishCallback;
+    utterance.onerror = finishCallback;
+    window.speechSynthesis.speak(utterance);
+  } else {
+    finishCallback();
+  }
+}
+
+// ════════════════════════════════════════
+// SPRACHAUSGABE (HAUPTMENÜ / CHAT)
+// ════════════════════════════════════════
+function speak(text) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    
+    let cleanText = text.replace(/[*_:#🤖✨]/g, ' ').replace(/,/g, ', ');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'de-DE';
+    
+    utterance.rate = typeof speechRate !== 'undefined' ? speechRate : 1.0;
+    utterance.pitch = typeof speechPitch !== 'undefined' ? speechPitch : 1.05; 
+
+    const voices = window.speechSynthesis.getVoices();
+    const deVoices = voices.filter(v => v.lang.startsWith('de') || v.lang.startsWith('DE'));
+
+    if (deVoices.length > 0) {
+      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet'))
+                   || deVoices.find(v => v.name.includes('Premium') || v.name.includes('Anna') || v.name.includes('Amelie'))
+                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'));
+                   
+      if (!bestVoice && deVoices.length > 1) {
+        bestVoice = deVoices[1]; 
+      } else if (!bestVoice) {
+        bestVoice = deVoices[0];
+      }
+
+      if (bestVoice) { utterance.voice = bestVoice; }
+    }
+
+    window.speechSynthesis.speak(utterance);
+  }
+}
+
+if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+  window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+}
+
 }
 
 // ════════════════════════════════════════
