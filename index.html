@@ -1935,6 +1935,57 @@ function speakOnAge(text, onDone) {
 // ════════════════════════════════════════
 // SPRACHAUSGABE (HAUPTMENÜ / CHAT)
 // ════════════════════════════════════════
+// ════════════════════════════════════════
+// SPRACHAUSGABE (STARTMENÜ / BEGRÜSSUNG)
+// ════════════════════════════════════════
+function speakOnAge(text, onDone) {
+  let isDone = false;
+  function finishCallback() {
+    if (isDone) return;
+    isDone = true;
+    if (onDone) onDone();
+  }
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    
+    let cleanText = text.replace(/[*_:#🤖✨]/g, ' ').replace(/,/g, ', ');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'de-DE';
+    
+    if (typeof currentAge !== 'undefined' && AGE_GROUPS[currentAge]) {
+      utterance.rate = AGE_GROUPS[currentAge].rate;
+      utterance.pitch = AGE_GROUPS[currentAge].pitch;
+    } else {
+      utterance.rate = 1.0;
+      utterance.pitch = 1.05;
+    }
+
+    const voices = window.speechSynthesis.getVoices();
+    const deVoices = voices.filter(v => v.lang.startsWith('de') || v.lang.startsWith('DE'));
+
+    if (deVoices.length > 0) {
+      // Spezial-Filter für Smartphones (Siri, verbesserte iOS-Stimmen & Android-Netzwerk-Stimmen)
+      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet') || v.name.includes('network'))
+                   || deVoices.find(v => v.name.includes('Verbessert') || v.name.includes('Enhanced') || v.name.includes('Premium'))
+                   || deVoices.find(v => v.name.includes('Siri') || v.name.includes('Anna') || v.name.includes('Amelie') || v.name.includes('Markus'))
+                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'))
+                   || deVoices[0];
+                   
+      if (bestVoice) { utterance.voice = bestVoice; }
+    }
+
+    utterance.onend = finishCallback;
+    utterance.onerror = finishCallback;
+    window.speechSynthesis.speak(utterance);
+  } else {
+    finishCallback();
+  }
+}
+
+// ════════════════════════════════════════
+// SPRACHAUSGABE (HAUPTMENÜ / CHAT)
+// ════════════════════════════════════════
 function speak(text) {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
@@ -1943,32 +1994,30 @@ function speak(text) {
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'de-DE';
     
-    utterance.rate = typeof speechRate !== 'undefined' ? speechRate : 1.0;
-    utterance.pitch = typeof speechPitch !== 'undefined' ? speechPitch : 1.05; 
+    if (typeof currentAge !== 'undefined' && AGE_GROUPS[currentAge]) {
+      utterance.rate = AGE_GROUPS[currentAge].rate;
+      utterance.pitch = AGE_GROUPS[currentAge].pitch;
+    } else {
+      utterance.rate = 1.0;
+      utterance.pitch = 1.05;
+    }
 
     const voices = window.speechSynthesis.getVoices();
     const deVoices = voices.filter(v => v.lang.startsWith('de') || v.lang.startsWith('DE'));
 
     if (deVoices.length > 0) {
-      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet'))
-                   || deVoices.find(v => v.name.includes('Premium') || v.name.includes('Anna') || v.name.includes('Amelie'))
-                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'));
+      // Dieselbe optimierte Smartphone-Suche auch für den Chat
+      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet') || v.name.includes('network'))
+                   || deVoices.find(v => v.name.includes('Verbessert') || v.name.includes('Enhanced') || v.name.includes('Premium'))
+                   || deVoices.find(v => v.name.includes('Siri') || v.name.includes('Anna') || v.name.includes('Amelie') || v.name.includes('Markus'))
+                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'))
+                   || deVoices[0];
                    
-      if (!bestVoice && deVoices.length > 1) {
-        bestVoice = deVoices[1]; 
-      } else if (!bestVoice) {
-        bestVoice = deVoices[0];
-      }
-
       if (bestVoice) { utterance.voice = bestVoice; }
     }
 
     window.speechSynthesis.speak(utterance);
   }
-}
-
-if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
-  window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
 }
 // ════════════════════════════════════════
 // INIT
