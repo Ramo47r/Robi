@@ -1039,10 +1039,9 @@ let lastRobiText = '';
 let starCount = parseInt(localStorage.getItem('robi_stars') || '0');
 
 const AGE_GROUPS = {
-  // 🎯 NATÜRLICH & KLAR: Wie die freundliche ChatGPT-Frauenstimme — kein Roboter!
   '1-3':  { label: '🍼 1-3 Jahre',  rate: 0.88, pitch: 1.0,
              greeting: 'Hallo mein Schatz! Ich bin Robi! Schön dass du da bist!' },
-  '4-6':  { label: '🎈 4-6 Jahre',  rate: 0.92, pitch: 1.0,
+  '4-6':  { label: '🎈 4-6 Jahre',  rate: 0.92, pitch: 1.08,
              greeting: 'Hallo! Ich bin Robi, dein Freund! Was machen wir heute?' },
   '7-9':  { label: '🎒 7-9 Jahre',  rate: 0.95, pitch: 1.0,
              greeting: 'Hi! Ich bin Robi! Worauf hast du heute Lust?' },
@@ -1050,15 +1049,14 @@ const AGE_GROUPS = {
              greeting: 'Hey! Ich bin Robi. Was wollen wir heute machen?' },
 };
 
-// Modes — like Buddy.ai's "lessons" / "categories"
 const MODES = {
   talk: {
     icon: '💬', title: 'Chat',
     welcome: {
-      '1-3':  'Hallo Schatz! Du kannst mit mir reden.',
-      '4-6':  'Hallo! Frag mich was du willst!',
-      '7-9':  'Hi! Frag mich was du willst!',
-      '10-12':'Hey! Frag mich alles!',
+      '1-3':  'Hallo, Schön dass du da bist! Du kannst mit mir reden.',
+      '4-6':  'Hallo, Schön dass du da bist! Du kannst mit mir reden.',
+      '7-9':  'Hallo, Schön dass du da bist! Du kannst mit mir reden.',
+      '10-12':'Hallo, Schön dass du da bist! Du kannst mit mir reden.',
     },
   },
   homework: {
@@ -1092,7 +1090,7 @@ const MODES = {
     icon: '😂', title: 'Witze',
     welcome: {
       '1-3':  'Hihi! Magst du lustige Geräusche?',
-      '4-6':  'Witz oder Rätsel?',
+      '4-6':  'Witz oder Rätsel, was ist dir lieber??',
       '7-9':  'Bereit zum Lachen?',
       '10-12':'Lass uns lachen!',
     },
@@ -1886,7 +1884,92 @@ function changePin() {
   alert('✓ PIN wurde geändert.');
 }
 
+// ════════════════════════════════════════
+// SPRACHAUSGABE (STARTMENÜ / BEGRÜSSUNG)
+// ════════════════════════════════════════
+function speakOnAge(text, onDone) {
+  let isDone = false;
+  function finishCallback() {
+    if (isDone) return;
+    isDone = true;
+    if (onDone) onDone();
+  }
 
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    
+    // Bringt Emotionen rein: Störende Zeichen raus, aber Atempauzen bei Kommas
+    let cleanText = text.replace(/[*_:#🤖✨]/g, ' ').replace(/,/g, ', ');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'de-DE';
+    
+    // Nutzt die eingestellten Werte der App
+    utterance.rate = typeof speechRate !== 'undefined' ? speechRate : 1.0;
+    utterance.pitch = typeof speechPitch !== 'undefined' ? speechPitch : 1.05;
+
+    const voices = window.speechSynthesis.getVoices();
+    const deVoices = voices.filter(v => v.lang.startsWith('de') || v.lang.startsWith('DE'));
+
+    if (deVoices.length > 0) {
+      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet'))
+                   || deVoices.find(v => v.name.includes('Premium') || v.name.includes('Anna') || v.name.includes('Amelie'))
+                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'));
+                   
+      if (!bestVoice && deVoices.length > 1) {
+        bestVoice = deVoices[1]; 
+      } else if (!bestVoice) {
+        bestVoice = deVoices[0];
+      }
+
+      if (bestVoice) { utterance.voice = bestVoice; }
+    }
+
+    utterance.onend = finishCallback;
+    utterance.onerror = finishCallback;
+    window.speechSynthesis.speak(utterance);
+  } else {
+    finishCallback();
+  }
+}
+
+// ════════════════════════════════════════
+// SPRACHAUSGABE (HAUPTMENÜ / CHAT)
+// ════════════════════════════════════════
+function speak(text) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    
+    let cleanText = text.replace(/[*_:#🤖✨]/g, ' ').replace(/,/g, ', ');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'de-DE';
+    
+    utterance.rate = typeof speechRate !== 'undefined' ? speechRate : 1.0;
+    utterance.pitch = typeof speechPitch !== 'undefined' ? speechPitch : 1.05; 
+
+    const voices = window.speechSynthesis.getVoices();
+    const deVoices = voices.filter(v => v.lang.startsWith('de') || v.lang.startsWith('DE'));
+
+    if (deVoices.length > 0) {
+      let bestVoice = deVoices.find(v => v.name.includes('Natural') || v.name.includes('neural') || v.name.includes('wavenet'))
+                   || deVoices.find(v => v.name.includes('Premium') || v.name.includes('Anna') || v.name.includes('Amelie'))
+                   || deVoices.find(v => v.name.includes('Google') && !v.name.includes('Standard'));
+                   
+      if (!bestVoice && deVoices.length > 1) {
+        bestVoice = deVoices[1]; 
+      } else if (!bestVoice) {
+        bestVoice = deVoices[0];
+      }
+
+      if (bestVoice) { utterance.voice = bestVoice; }
+    }
+
+    window.speechSynthesis.speak(utterance);
+  }
+}
+
+if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+  window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+}
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
