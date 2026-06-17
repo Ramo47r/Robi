@@ -1,18 +1,15 @@
 // ============================================================
 // Robi Backend — Google Gemini (Chat) & OpenAI (Stimme)
 // ============================================================
-import express from 'express';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
-import { GoogleGenAI } from '@google/genai'; // Google Chat SDK
-import OpenAI from 'openai'; // ✅ KORRIGIERT: Moderner Import statt 'require'
-import { fileURLToPath } from 'url';
-import path from 'path';
-import 'dotenv/config';
+const express = require('express');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
+const { GoogleGenAI } = require('@google/genai'); // Google Chat SDK
+const OpenAI = require('openai'); // OpenAI SDK
+const path = require('path');
+require('dotenv/config');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 10000; 
 
 // ── API Key Checks ─────────────────────────────────────────
@@ -132,7 +129,6 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
 });
 
 // ── /api/speech (Neue Premium Audio-Schnittstelle) ─────────
-// ✅ KORRIGIERT: Wurde vor die Fallback-Route nach oben verschoben!
 app.post('/api/speech', async (req, res) => {
   const { text } = req.body;
 
