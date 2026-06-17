@@ -1414,6 +1414,14 @@ function setHint(text) {
 }
 
 function updateStarCount() {
+  function updateStarCount(stars) {
+  const starElement = document.getElementById('starCount');
+  
+  // PROFITRICK: Wenn das Element fehlt, brechen wir lautlos ab, ohne Fehler zu werfen!
+  if (!starElement) return; 
+  
+  starElement.textContent = stars; // oder innerText, je nachdem was da stand
+}
   const starCountEl = document.getElementById('starCount');
   if (starCountEl) {
     starCountEl.textContent = starCount;
