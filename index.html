@@ -2005,38 +2005,25 @@ async function sendMessage(userText) {
     lastRobiText = reply;
     setHint('Drück das Mikro und sprich!');
     
-   // Diese Funktion muss in deinem Skript liegen und aufgerufen werden!
-async function speakPremium(text) {
-  const robot = document.getElementById('robot'); // oder wie auch immer deine Roboter-ID heißt
-  if (robot) robot.classList.add('talking');
-
-  try {
-    // Hier rufen wir DEINEN Server (Render) an, damit er OpenAI nutzt
-    const response = await fetch('/api/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text })
-    });
-
-    if (!response.ok) throw new Error("Audio-Server Fehler");
-
-    const audioBlob = await response.blob();
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-
-    audio.onended = () => {
-      if (robot) robot.classList.remove('talking');
-      URL.revokeObjectURL(audioUrl); 
-    };
+  const reply = data.reply || 'Hmm, mir fällt gerade nichts ein!';
+    console.log('[sendMessage] Liams Antwort:', reply);
     
-    await audio.play();
+    // Validiere auf genderneutrale Sprache vor Sprachausgabe
+    validateGenderNeutralLanguage(reply);
+    
+    messages.push({ role: 'assistant', content: reply });
+    setBubble(reply);
+    lastRobiText = reply;
+    setHint('Drück das Mikro und sprich!');
+    
+    // 🎯 HIER IST DIE MAGIE: Wir rufen deine fertige Premium-Stimme von ganz oben auf!
+    await speakLiam(reply);
 
-  } catch (err) {
-    console.error('[Premium TTS Error]', err);
-    // Nur im Notfall nutzen wir wieder Microsoft Katja!
-    fallbackSpeak(text); 
-  }
-}
+} // <-- Das ist das offizielle Ende der sendMessage Funktion!
+
+// ════════════════════════════════════════
+// KARAOKE
+// ════════════════════════════════════════
 // ════════════════════════════════════════
 // KARAOKE
 // ════════════════════════════════════════
