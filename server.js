@@ -169,3 +169,11 @@ app.post('/api/speech', async (req, res) => {
 });
 
 // ── Fallback für die App (✅ WICHTIG: HIER GANZ UNTEN!) ─────
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Starten
+app.listen(PORT, () => {
+  console.log(`\n🤖 Robi läuft stabil mit Google Gemini & OpenAI TTS auf Port ${PORT}\n`);
+});
