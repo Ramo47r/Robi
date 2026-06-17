@@ -134,6 +134,47 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Installiere vorher das OpenAI-Paket auf deinem Server, falls noch nicht geschehen: 
+// npm install openai
+
+const OpenAI = require('openai');
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY // Dein OpenAI API Key
+});
+
+// Neue Route für die Sprachausgabe
+app.post('/api/speech', async (req, res) => {
+  const { text } = req.body;
+
+  if (!text) {
+    return res.status(400).json({ error: "Kein Text übermittelt" });
+  }
+
+  try {
+    // OpenAI TTS API aufrufen
+    const mp3Response = await openai.audio.speech.create({
+      model: "tts-1",       // WICHTIG: "tts-1" ist für extrem schnelles Streaming (geringe Latenz)
+      voice: "alloy",       // "alloy" ist neutral, "nova" ist etwas weiblicher/wärmer
+      input: text,
+      response_format: "mp3"
+    });
+
+    // Wir sagen der App: "Achtung, jetzt kommt fließendes Audio!"
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Transfer-Encoding': 'chunked'
+    });
+
+    // Wandelt den OpenAI-Stream in einen Buffer um und sendet ihn ans Handy
+    const buffer = Buffer.from(await mp3Response.arrayBuffer());
+    res.send(buffer);
+
+  } catch (error) {
+    console.error("Fehler bei OpenAI TTS:", error);
+    res.status(500).json({ error: "Audio konnte nicht generiert werden" });
+  }
+});
+
 // Starten
 app.listen(PORT, () => {
   console.log(`\n🤖 Robi läuft stabil mit Google Gemini auf Port ${PORT}\n`);
