@@ -1,30 +1,33 @@
 // ============================================================
-// Robi Backend — Google Gemini (Chat) & OpenAI (Stimme)
+// Robi Backend — Google Gemini Version (Kostenlos & Stabil)
 // ============================================================
-const express = require('express');
-const cors = require('cors');
-const rateLimit = require('express-rate-limit');
-const { GoogleGenAI } = require('@google/genai'); // Google Chat SDK
-const OpenAI = require('openai'); // OpenAI SDK
-const path = require('path');
-require('dotenv/config');
+import express from 'express';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import { GoogleGenAI } from '@google/genai'; // Das offizielle, aktuelle Google SDK
+import OpenAI from 'openai'; // ✅ HIER OBEN KORREKT EINGEFÜGT
+import { fileURLToPath } from 'url';
+import path from 'path';
+import 'dotenv/config';
 
-const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+const app  = express();
 const PORT = process.env.PORT || 10000; 
 
-// ── API Key Checks ─────────────────────────────────────────
+// ── API Key check ───────────────────────────────────
 if (!process.env.GEMINI_API_KEY) {
-  console.error('\n❌  GEMINI_API_KEY fehlt in der .env Datei oder den Server-Einstellungen!');
+  console.error('\n❌  GEMINI_API_KEY fehlt in den Render-Einstellungen!');
   process.exit(1);
 }
-if (!process.env.OPENAI_API_KEY) {
-  console.error('\n❌  OPENAI_API_KEY fehlt in der .env Datei oder den Server-Einstellungen!');
+if (!process.env.OPENAI_API_KEY) { // ✅ NEUER CHECK FÜR AUDIO
+  console.error('\n❌  OPENAI_API_KEY fehlt!');
   process.exit(1);
 }
 
-// ── Initialisierung der KIs ────────────────────────────────
+// Initialisierung der SDKs
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY }); // ✅ HIER INITIALISIERT
 
 // ── Middleware ─────────────────────────────────────────────
 app.use(cors({ origin: '*', methods: ['GET','POST','OPTIONS'] }));
@@ -39,7 +42,7 @@ app.use(express.static(__dirname, {
   }
 }));
 
-// HTTPS Umleitung (für Live-Server)
+// HTTPS Umleitung
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] === 'http' && !req.headers.host?.includes('localhost')) {
     return res.redirect(301, 'https://' + req.headers.host + req.url);
@@ -50,7 +53,7 @@ app.use((req, res, next) => {
 // ── Rate Limit (Spam-Schutz) ────────────────────────────────
 const chatLimiter = rateLimit({
   windowMs: 60_000, 
-  max: 45, 
+  max: 45, // Gemini erlaubt mehr Anfragen im Free-Tier
   standardHeaders: true, 
   legacyHeaders: false,
   message: { error: 'Zu viele Anfragen — kurz warten!' },
@@ -86,7 +89,7 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, provider: 'google', model: 'gemini-2.5-flash', ts: new Date().toISOString() });
 });
 
-// ── /api/chat (Haupt-Schnittstelle für Text) ───────────────
+// ── /api/chat (Haupt-Schnittstelle) ────────────────────────
 app.post('/api/chat', chatLimiter, async (req, res) => {
   try {
     const { messages, mode, age } = req.body;
@@ -98,8 +101,11 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     const safeAge  = ['1-3','4-6','7-9','10-12'].includes(age) ? age : '7-9';
     const safeMode = Object.keys(MODE_PROMPTS).includes(mode)  ? mode : 'talk';
 
+    // Wir bauen den System-Prompt zusammen
     const systemInstruction = `${BASE_PROMPT}\n\n${AGE_PROMPTS[safeAge]}\n\n${MODE_PROMPTS[safeMode]}`;
 
+    // Gemini erwartet eine flache Struktur für den Verlauf. 
+    // Das SDK übersetzt die Rollen 'user' und 'assistant' automatisch.
     const chatContents = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }]
@@ -107,6 +113,7 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
 
     console.log(`[Gemini Chat] Modus: ${safeMode} | Alter: ${safeAge}`);
 
+    // API-Aufruf an Google Gemini
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: chatContents,
@@ -128,7 +135,7 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
   }
 });
 
-// ── /api/speech (Neue Premium Audio-Schnittstelle) ─────────
+// ── /api/speech (Neue Route für Sprachausgabe) ─────────────
 app.post('/api/speech', async (req, res) => {
   const { text } = req.body;
 
@@ -137,18 +144,21 @@ app.post('/api/speech', async (req, res) => {
   }
 
   try {
+    // OpenAI TTS API aufrufen
     const mp3Response = await openai.audio.speech.create({
-      model: "tts-1",
-      voice: "alloy",
+      model: "tts-1",       // WICHTIG: "tts-1" ist für extrem schnelles Streaming
+      voice: "alloy",       // "alloy" ist neutral
       input: text,
       response_format: "mp3"
     });
 
+    // Wir sagen der App: "Achtung, jetzt kommt fließendes Audio!"
     res.set({
       'Content-Type': 'audio/mpeg',
       'Transfer-Encoding': 'chunked'
     });
 
+    // Wandelt den OpenAI-Stream in einen Buffer um und sendet ihn ans Handy
     const buffer = Buffer.from(await mp3Response.arrayBuffer());
     res.send(buffer);
 
@@ -158,12 +168,4 @@ app.post('/api/speech', async (req, res) => {
   }
 });
 
-// ── Fallback für die App (MUSS IMMER GANZ UNTEN STEHEN!) ───
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// ── Server Start ───────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n🤖 Robi läuft stabil mit Google Gemini & OpenAI TTS auf Port ${PORT}\n`);
-});
+// ── Fallback für die App (✅ WICHTIG: HIER GANZ UNTEN!) ─────
