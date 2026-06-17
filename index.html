@@ -1963,10 +1963,9 @@ async function sendMessage(userText) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         messages, 
-        mood: currentMood, 
-        
-        mode: currentMode, 
-        age: currentAge, 
+        mood: typeof currentMood !== 'undefined' ? currentMood : 'normal', 
+        mode: typeof currentMode !== 'undefined' ? currentMode : 'talk', 
+        age: typeof currentAge !== 'undefined' ? currentAge : '7-9', 
         emotion: userEmotion,
         liamMode: true  // Aktiviere Liam-Persönlichkeit
       }),
@@ -1999,153 +1998,203 @@ async function sendMessage(userText) {
     console.log('[sendMessage] Liams Antwort:', reply);
     
     // Validiere auf genderneutrale Sprache vor Sprachausgabe
-    validateGenderNeutralLanguage(reply);
+    if (typeof validateGenderNeutralLanguage === 'function') {
+      validateGenderNeutralLanguage(reply);
+    }
     
     messages.push({ role: 'assistant', content: reply });
     setBubble(reply);
-    lastRobiText = reply;
+    if (typeof lastRobiText !== 'undefined') lastRobiText = reply;
     setHint('Drück das Mikro und sprich!');
     
-    messages.push({ role: 'assistant', content: reply });
-    setBubble(reply);
-    lastRobiText = reply;
-    setHint('Drück das Mikro und sprich!');
-    
-    // 🎯 HIER IST DIE MAGIE: Wir rufen deine fertige Premium-Stimme von ganz oben auf!
+    // 🎯 HIER IST DIE MAGIE: Wir rufen deine fertige Premium-Stimme auf!
     await speakLiam(reply);
 
-} // <-- Das ist das offizielle Ende der sendMessage Funktion!
+  // 🪂 HIER IST DER FALLSCHIRM FÜR FEHLER:
+  } catch (err) {
+    console.error('[sendMessage] Fehler:', err);
+    const errorMsg = "Hoppla, das hat nicht geklappt!";
+    setBubble(errorMsg);
+    if (typeof fallbackSpeak === 'function') {
+      fallbackSpeak(errorMsg);
+    }
+  } finally {
+    const micBtn = document.getElementById('micBtn');
+    if (micBtn) micBtn.disabled = false;
+    setHint('Tipp das Mikro und sprich!');
+  }
+} // <-- Das ist das offizielle und saubere Ende der sendMessage Funktion!
 
-// ════════════════════════════════════════
-// KARAOKE
-// ════════════════════════════════════════
 // ════════════════════════════════════════
 // KARAOKE
 // ════════════════════════════════════════
 function renderSongList() {
-  const list = document.getElementById('songList');
-  list.innerHTML = '';
-  const songs = ALL_SONGS.filter(s => !currentAge || s.ages.includes(currentAge));
-  songs.forEach((song) => {
-    const btn = document.createElement('button');
-    btn.className = 'song-btn';
-    btn.innerHTML = '<span class="song-icon">' + song.icon + '</span><span>' + song.title + '</span>';
-    btn.onclick = () => playSong(song);
-    list.appendChild(btn);
-  });
+  const list = document.getElementById('songList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (typeof ALL_SONGS === 'undefined') return;
+  const songs = ALL_SONGS.filter(s => !currentAge || s.ages.includes(currentAge));
+  songs.forEach((song) => {
+    const btn = document.createElement('button');
+    btn.className = 'song-btn';
+    btn.innerHTML = '<span class="song-icon">' + song.icon + '</span><span>' + song.title + '</span>';
+    btn.onclick = () => playSong(song);
+    list.appendChild(btn);
+  });
 }
 
 function playSong(song) {
-  if (!song || !synth) return;
-  isKaraoke = true;
-  document.getElementById('stopSongBtn').style.display = 'inline-flex';
-  document.getElementById('songList').style.opacity = '0.5';
-  let lineIdx = 0;
-  function speakNext() {
-    if (!isKaraoke || lineIdx >= song.lyrics.length) { stopKaraoke(); return; }
-    const utter = new SpeechSynthesisUtterance(song.lyrics[lineIdx]);
-    if (selectedVoice) utter.voice = selectedVoice;
-    utter.lang = 'de-DE';
-    utter.rate = 0.9;
-    utter.pitch = 1.0;
-    utter.onend = () => { lineIdx++; setTimeout(speakNext, 400); };
-    utter.onerror = () => stopKaraoke();
-    synth.speak(utter);
-  }
-  synth.cancel();
-  setTimeout(speakNext, 200);
+  if (!song || typeof synth === 'undefined' || !synth) return;
+  if (typeof isKaraoke !== 'undefined') isKaraoke = true;
+  
+  const stopBtn = document.getElementById('stopSongBtn');
+  const list = document.getElementById('songList');
+  if (stopBtn) stopBtn.style.display = 'inline-flex';
+  if (list) list.style.opacity = '0.5';
+  
+  let lineIdx = 0;
+  function speakNext() {
+    if ((typeof isKaraoke !== 'undefined' && !isKaraoke) || lineIdx >= song.lyrics.length) { 
+      stopKaraoke(); 
+      return; 
+    }
+    const utter = new SpeechSynthesisUtterance(song.lyrics[lineIdx]);
+    if (typeof selectedVoice !== 'undefined' && selectedVoice) utter.voice = selectedVoice;
+    utter.lang = 'de-DE';
+    utter.rate = 0.9;
+    utter.pitch = 1.0;
+    utter.onend = () => { lineIdx++; setTimeout(speakNext, 400); };
+    utter.onerror = () => stopKaraoke();
+    synth.speak(utter);
+  }
+  synth.cancel();
+  setTimeout(speakNext, 200);
 }
 
 function stopKaraoke() {
-  isKaraoke = false;
-  if (synth) synth.cancel();
-  document.getElementById('stopSongBtn').style.display = 'none';
-  document.getElementById('songList').style.opacity = '1';
+  if (typeof isKaraoke !== 'undefined') isKaraoke = false;
+  if (typeof synth !== 'undefined' && synth) synth.cancel();
+  const stopBtn = document.getElementById('stopSongBtn');
+  const list = document.getElementById('songList');
+  if (stopBtn) stopBtn.style.display = 'none';
+  if (list) list.style.opacity = '1';
 }
 
 // ════════════════════════════════════════
 // PARENT PIN
 // ════════════════════════════════════════
 function openSettings() {
-  document.getElementById('panelPin').classList.add('show');
-  document.getElementById('pinInput').value = '';
-  setTimeout(() => document.getElementById('pinInput').focus(), 100);
+  const panel = document.getElementById('panelPin');
+  const input = document.getElementById('pinInput');
+  if (panel) panel.classList.add('show');
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 100);
+  }
 }
-function closePinPanel() { document.getElementById('panelPin').classList.remove('show'); }
+function closePinPanel() { 
+  const panel = document.getElementById('panelPin');
+  if (panel) panel.classList.remove('show'); 
+}
 function checkPin() {
-  const entered = document.getElementById('pinInput').value;
-  if (entered === parentPin) { closePinPanel(); openSettingsPanel(); }
-  else { alert('❌ Falsche PIN.'); document.getElementById('pinInput').value = ''; }
+  const input = document.getElementById('pinInput');
+  if (!input) return;
+  const entered = input.value;
+  if (typeof parentPin !== 'undefined' && entered === parentPin) { 
+    closePinPanel(); 
+    openSettingsPanel(); 
+  } else { 
+    alert('❌ Falsche PIN.'); 
+    input.value = ''; 
+  }
 }
-document.getElementById('pinInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') checkPin();
-});
+
+const pinInputElem = document.getElementById('pinInput');
+if (pinInputElem) {
+  pinInputElem.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') checkPin();
+  });
+}
 
 function openSettingsPanel() {
-  renderLockToggles();
-  document.getElementById('rateSlider').value = speechRate;
-  document.getElementById('rateVal').textContent = speechRate.toFixed(2);
-  document.getElementById('pitchSlider').value = speechPitch;
-  document.getElementById('pitchVal').textContent = speechPitch.toFixed(2);
-  document.getElementById('panelSettings').classList.add('show');
+  renderLockToggles();
+  const rateSlider = document.getElementById('rateSlider');
+  const pitchSlider = document.getElementById('pitchSlider');
+  
+  if (rateSlider && typeof speechRate !== 'undefined') {
+    rateSlider.value = speechRate;
+    document.getElementById('rateVal').textContent = speechRate.toFixed(2);
+  }
+  if (pitchSlider && typeof speechPitch !== 'undefined') {
+    pitchSlider.value = speechPitch;
+    document.getElementById('pitchVal').textContent = speechPitch.toFixed(2);
+  }
+  const panelSettings = document.getElementById('panelSettings');
+  if (panelSettings) panelSettings.classList.add('show');
 }
+
 function closeSettings() {
-  document.getElementById('panelSettings').classList.remove('show');
-  renderLessonCards();
+  const panelSettings = document.getElementById('panelSettings');
+  if (panelSettings) panelSettings.classList.remove('show');
+  if (typeof renderLessonCards === 'function') renderLessonCards();
 }
 
 function renderLockToggles() {
-  const container = document.getElementById('lockToggles');
-  container.innerHTML = '';
-  const allModes = { ...MODES, karaoke: { icon: '🎤', title: 'Karaoke' } };
-  Object.entries(allModes).forEach(([key, m]) => {
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex; align-items:center; gap:10px; padding:5px 0;';
-    const checked = parentLocks[key] ? 'checked' : '';
-    div.innerHTML = '<input type="checkbox" id="lock-' + key + '" ' + checked + ' onchange="toggleLock(\'' + key + '\')" style="width:18px; height:18px; cursor:pointer;">' +
-                    '<label for="lock-' + key + '" style="margin:0; font-weight:normal; cursor:pointer;">' +
-                    m.icon + ' ' + m.title + ' sperren</label>';
-    container.appendChild(div);
-  });
+  const container = document.getElementById('lockToggles');
+  if (!container) return;
+  container.innerHTML = '';
+  if (typeof MODES === 'undefined' || typeof parentLocks === 'undefined') return;
+  
+  const allModes = { ...MODES, karaoke: { icon: '🎤', title: 'Karaoke' } };
+  Object.entries(allModes).forEach(([key, m]) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex; align-items:center; gap:10px; padding:5px 0;';
+    const checked = parentLocks[key] ? 'checked' : '';
+    div.innerHTML = '<input type="checkbox" id="lock-' + key + '" ' + checked + ' onchange="toggleLock(\'' + key + '\')" style="width:18px; height:18px; cursor:pointer;">' +
+                    '<label for="lock-' + key + '" style="margin:0; font-weight:normal; cursor:pointer;">' +
+                    m.icon + ' ' + m.title + ' sperren</label>';
+    container.appendChild(div);
+  });
 }
 
 function toggleLock(mode) {
-  parentLocks[mode] = !parentLocks[mode];
-  localStorage.setItem('robi_locks', JSON.stringify(parentLocks));
+  if (typeof parentLocks === 'undefined') return;
+  parentLocks[mode] = !parentLocks[mode];
+  localStorage.setItem('robi_locks', JSON.stringify(parentLocks));
 }
 
 function changePin() {
-  const newPin = document.getElementById('newPinInput').value;
-  if (!/^\d{4,6}$/.test(newPin)) { alert('PIN muss 4-6 Ziffern haben.'); return; }
-  parentPin = newPin;
-  localStorage.setItem('robi_pin', newPin);
-  document.getElementById('newPinInput').value = '';
-  alert('✓ PIN wurde geändert.');
+  const newPinInput = document.getElementById('newPinInput');
+  if (!newPinInput) return;
+  const newPin = newPinInput.value;
+  if (!/^\d{4,6}$/.test(newPin)) { alert('PIN muss 4-6 Ziffern haben.'); return; }
+  if (typeof parentPin !== 'undefined') parentPin = newPin;
+  localStorage.setItem('robi_pin', newPin);
+  newPinInput.value = '';
+  alert('✓ PIN wurde geändert.');
 }
-
 
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
 const savedAge = localStorage.getItem('robi_age');
-if (savedAge && AGE_GROUPS[savedAge]) {
-  currentAge = savedAge;
-  speechRate = AGE_GROUPS[savedAge].rate;
-  speechPitch = AGE_GROUPS[savedAge].pitch;
-  showScreen('main');
-  // Show UI immediately — speak on first tap (browser audio policy)
-  initMain();
+if (savedAge && typeof AGE_GROUPS !== 'undefined' && AGE_GROUPS[savedAge]) {
+  if (typeof currentAge !== 'undefined') currentAge = savedAge;
+  if (typeof speechRate !== 'undefined') speechRate = AGE_GROUPS[savedAge].rate;
+  if (typeof speechPitch !== 'undefined') speechPitch = AGE_GROUPS[savedAge].pitch;
+  if (typeof showScreen === 'function') showScreen('main');
+  if (typeof initMain === 'function') initMain();
 }
 
 // ════════════════════════════════════════
 // PWA — Service Worker Registration
 // ════════════════════════════════════════
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('Robi SW registered'))
-      .catch(err => console.log('SW error:', err));
-  });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('Robi SW registered'))
+      .catch(err => console.log('SW error:', err));
+  });
 }
 
 // ════════════════════════════════════════
