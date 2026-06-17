@@ -1769,7 +1769,8 @@ function validateGenderNeutralLanguage(text) {
 // Parse Text für natürliche Sprechweise (kurze Sätze, Pausen)
 function parseForSpeech(text) {
   text = text.replace(/<[^>]*>/g, '').trim();
-  const sentences = text.match(/[^.!?]*[.!?]+/g) || [text];
+  const sentences = text.match(/[^.!?]*[.!?]+/g) ||
+    [text];
   
   const chunks = [];
   let currentChunk = '';
@@ -2004,12 +2005,6 @@ async function sendMessage(userText) {
     setBubble(reply);
     lastRobiText = reply;
     setHint('Drück das Mikro und sprich!');
-    
-  const reply = data.reply || 'Hmm, mir fällt gerade nichts ein!';
-    console.log('[sendMessage] Liams Antwort:', reply);
-    
-    // Validiere auf genderneutrale Sprache vor Sprachausgabe
-    validateGenderNeutralLanguage(reply);
     
     messages.push({ role: 'assistant', content: reply });
     setBubble(reply);
