@@ -1963,6 +1963,7 @@ async function sendMessage(userText) {
       body: JSON.stringify({ 
         messages, 
         mood: currentMood, 
+        
         mode: currentMode, 
         age: currentAge, 
         emotion: userEmotion,
@@ -2004,23 +2005,38 @@ async function sendMessage(userText) {
     lastRobiText = reply;
     setHint('Drück das Mikro und sprich!');
     
-    // LIAM: Nutze optimierte Sprachausgabe
-    await speakLiam(reply);
-    awardStar();
+   // Diese Funktion muss in deinem Skript liegen und aufgerufen werden!
+async function speakPremium(text) {
+  const robot = document.getElementById('robot'); // oder wie auch immer deine Roboter-ID heißt
+  if (robot) robot.classList.add('talking');
+
+  try {
+    // Hier rufen wir DEINEN Server (Render) an, damit er OpenAI nutzt
+    const response = await fetch('/api/speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text })
+    });
+
+    if (!response.ok) throw new Error("Audio-Server Fehler");
+
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+
+    audio.onended = () => {
+      if (robot) robot.classList.remove('talking');
+      URL.revokeObjectURL(audioUrl); 
+    };
+    
+    await audio.play();
 
   } catch (err) {
-    console.error('[sendMessage] Fehler abgefangen:', err.message);
-    const errorDisplay = 'Hoppla! ' + (err.message || 'Etwas ist schiefgelaufen.');
-    setBubble(errorDisplay);
-    setHint('Probier es nochmal!');
-    if (messages.length > 0) messages.pop();
-    setRobiEmotion('normal');
-  } finally {
-    document.getElementById('micBtn').disabled = false;
+    console.error('[Premium TTS Error]', err);
+    // Nur im Notfall nutzen wir wieder Microsoft Katja!
+    fallbackSpeak(text); 
   }
 }
-
-
 // ════════════════════════════════════════
 // KARAOKE
 // ════════════════════════════════════════
