@@ -1,10 +1,11 @@
 // ============================================================
-// Robi Backend — Google Gemini Version (Kostenlos & Stabil)
+// Robi Backend — Google Gemini (Chat) & OpenAI (Stimme)
 // ============================================================
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import { GoogleGenAI } from '@google/genai'; // Das offizielle, aktuelle Google SDK
+import { GoogleGenAI } from '@google/genai'; // Google Chat SDK
+import OpenAI from 'openai'; // ✅ KORRIGIERT: Moderner Import statt 'require'
 import { fileURLToPath } from 'url';
 import path from 'path';
 import 'dotenv/config';
@@ -14,14 +15,19 @@ const __dirname  = path.dirname(__filename);
 const app  = express();
 const PORT = process.env.PORT || 10000; 
 
-// ── Gemini API Key check ───────────────────────────────────
+// ── API Key Checks ─────────────────────────────────────────
 if (!process.env.GEMINI_API_KEY) {
-  console.error('\n❌  GEMINI_API_KEY fehlt in den Render-Einstellungen!');
+  console.error('\n❌  GEMINI_API_KEY fehlt in der .env Datei oder den Server-Einstellungen!');
+  process.exit(1);
+}
+if (!process.env.OPENAI_API_KEY) {
+  console.error('\n❌  OPENAI_API_KEY fehlt in der .env Datei oder den Server-Einstellungen!');
   process.exit(1);
 }
 
-// Initialisierung des Google AI SDKs
+// ── Initialisierung der KIs ────────────────────────────────
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ── Middleware ─────────────────────────────────────────────
 app.use(cors({ origin: '*', methods: ['GET','POST','OPTIONS'] }));
@@ -36,7 +42,7 @@ app.use(express.static(__dirname, {
   }
 }));
 
-// HTTPS Umleitung
+// HTTPS Umleitung (für Live-Server)
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] === 'http' && !req.headers.host?.includes('localhost')) {
     return res.redirect(301, 'https://' + req.headers.host + req.url);
@@ -47,7 +53,7 @@ app.use((req, res, next) => {
 // ── Rate Limit (Spam-Schutz) ────────────────────────────────
 const chatLimiter = rateLimit({
   windowMs: 60_000, 
-  max: 45, // Gemini erlaubt mehr Anfragen im Free-Tier
+  max: 45, 
   standardHeaders: true, 
   legacyHeaders: false,
   message: { error: 'Zu viele Anfragen — kurz warten!' },
@@ -83,7 +89,7 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true, provider: 'google', model: 'gemini-2.5-flash', ts: new Date().toISOString() });
 });
 
-// ── /api/chat (Haupt-Schnittstelle) ────────────────────────
+// ── /api/chat (Haupt-Schnittstelle für Text) ───────────────
 app.post('/api/chat', chatLimiter, async (req, res) => {
   try {
     const { messages, mode, age } = req.body;
@@ -95,11 +101,8 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     const safeAge  = ['1-3','4-6','7-9','10-12'].includes(age) ? age : '7-9';
     const safeMode = Object.keys(MODE_PROMPTS).includes(mode)  ? mode : 'talk';
 
-    // Wir bauen den System-Prompt zusammen
     const systemInstruction = `${BASE_PROMPT}\n\n${AGE_PROMPTS[safeAge]}\n\n${MODE_PROMPTS[safeMode]}`;
 
-    // Gemini erwartet eine flache Struktur für den Verlauf. 
-    // Das SDK übersetzt die Rollen 'user' und 'assistant' automatisch.
     const chatContents = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }]
@@ -107,7 +110,6 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
 
     console.log(`[Gemini Chat] Modus: ${safeMode} | Alter: ${safeAge}`);
 
-    // API-Aufruf an Google Gemini
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: chatContents,
@@ -129,20 +131,8 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
   }
 });
 
-// Fallback für die App
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Installiere vorher das OpenAI-Paket auf deinem Server, falls noch nicht geschehen: 
-// npm install openai
-
-const OpenAI = require('openai');
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY // Dein OpenAI API Key
-});
-
-// Neue Route für die Sprachausgabe
+// ── /api/speech (Neue Premium Audio-Schnittstelle) ─────────
+// ✅ KORRIGIERT: Wurde vor die Fallback-Route nach oben verschoben!
 app.post('/api/speech', async (req, res) => {
   const { text } = req.body;
 
@@ -151,21 +141,18 @@ app.post('/api/speech', async (req, res) => {
   }
 
   try {
-    // OpenAI TTS API aufrufen
     const mp3Response = await openai.audio.speech.create({
-      model: "tts-1",       // WICHTIG: "tts-1" ist für extrem schnelles Streaming (geringe Latenz)
-      voice: "alloy",       // "alloy" ist neutral, "nova" ist etwas weiblicher/wärmer
+      model: "tts-1",
+      voice: "alloy",
       input: text,
       response_format: "mp3"
     });
 
-    // Wir sagen der App: "Achtung, jetzt kommt fließendes Audio!"
     res.set({
       'Content-Type': 'audio/mpeg',
       'Transfer-Encoding': 'chunked'
     });
 
-    // Wandelt den OpenAI-Stream in einen Buffer um und sendet ihn ans Handy
     const buffer = Buffer.from(await mp3Response.arrayBuffer());
     res.send(buffer);
 
@@ -175,7 +162,12 @@ app.post('/api/speech', async (req, res) => {
   }
 });
 
-// Starten
+// ── Fallback für die App (MUSS IMMER GANZ UNTEN STEHEN!) ───
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// ── Server Start ───────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🤖 Robi läuft stabil mit Google Gemini auf Port ${PORT}\n`);
+  console.log(`\n🤖 Robi läuft stabil mit Google Gemini & OpenAI TTS auf Port ${PORT}\n`);
 });
