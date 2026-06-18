@@ -1171,81 +1171,34 @@ function selectAge(age) {
   currentAge = age;
   localStorage.setItem('robi_age', age);
   const grp = AGE_GROUPS[age];
-  speechRate = grp.rate;
-  speechPitch = grp.pitch;
-
-  showAgeBubble(grp.greeting);
-
-  // First, wait for speech to actually start speaking on mobile
-  // (browser audio policy requires user interaction)
-  speakOnAge(grp.greeting, () => {
-    // Only switch screens AFTER speech has started/finished
+  
+  if (grp) {
+    speechRate = grp.rate;
+    speechPitch = grp.pitch;
+    showAgeBubble(grp.greeting);
+    
+    // Bildschirm wechseln und Menü aufbauen
     showScreen('main');
-    initMain();
-  });
+    if (typeof initMain === 'function') initMain();
+
+    // 🎯 HIER WIRD ELEVENLABS AUFGERUFEN!
+    speak(grp.greeting);
+  }
 }
 
 function goToAgeSelect() {
-  closeMenu();
-  if (synth) synth.cancel();
+  if (typeof closeMenu === 'function') closeMenu();
   showScreen('age');
 }
 
 function showAgeBubble(text) {
   const bubble = document.getElementById('ageBubble');
+  if (!bubble) return;
   bubble.textContent = text;
   bubble.classList.add('show');
   clearTimeout(showAgeBubble._t);
   showAgeBubble._t = setTimeout(() => bubble.classList.remove('show'), 4500);
 }
-
-function speakOnAge(text, onDone) {
-  let isDone = false;
-  function finishCallback() {
-    if (isDone) return;
-    isDone = true;
-    if (onDone) onDone();
-  }
-
-  if (!synth) { 
-    setTimeout(finishCallback, 500); 
-    return; 
-  }
-
-  synth.cancel();
-  const r = document.getElementById('robot'); // Angepasst auf deine ID "robot"
-  if (r) r.classList.add('talking');
-
-  // Emojis für den Redefluss entfernen
-  const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
-
-  const utter = new SpeechSynthesisUtterance(cleanText);
-  
-  // Premium-Stimmen-Filterung
-  const voice = availableVoices.find(v => 
-    v.lang.includes('de') && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Neural'))
-  ) || availableVoices.find(v => v.lang.includes('de'));
-  
-  if (voice) utter.voice = voice;
-  utter.lang = 'de-DE';
-  utter.rate = speechRate || 1.05;
-  utter.pitch = speechPitch || 1.15;
-  utter.volume = 1.0;
-
-  utter.onend = () => { 
-    if (r) r.classList.remove('talking');
-    finishCallback();
-  };
-  utter.onerror = (err) => { 
-    if (r) r.classList.remove('talking');
-    finishCallback();
-  };
-  synth.speak(utter);
-
-  const estimatedMs = Math.max(2500, cleanText.length * 75);
-  setTimeout(finishCallback, estimatedMs);
-}
-
 // ════════════════════════════════════════
 // MAIN SCREEN INIT
 // ════════════════════════════════════════
