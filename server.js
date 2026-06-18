@@ -1,11 +1,10 @@
 // ============================================================
-// Robi Backend — Google Gemini (Chat) & OpenAI (Premium Stimme)
+// Robi Backend — Google Gemini (Chat) & ElevenLabs (Premium Stimme)
 // ============================================================
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { GoogleGenAI } from '@google/genai';
-import OpenAI from 'openai';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import 'dotenv/config';
@@ -13,23 +12,23 @@ import 'dotenv/config';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const app  = express();
+
+// Port nur ein einziges Mal definieren
 const PORT = process.env.PORT || 10000; 
 
 // ── API Key Checks ─────────────────────────────────────────
-if (!process.env.GEMINI_API_KEY || !process.env.OPENAI_API_KEY) {
-  console.error('\n❌ FEHLER: GEMINI_API_KEY oder OPENAI_API_KEY fehlt in der .env Datei!');
-  process.exit(1);
+if (!process.env.GEMINI_API_KEY || !process.env.ELEVENLABS_API_KEY) {
+  console.error('\n❌ FEHLER: GEMINI_API_KEY oder ELEVENLABS_API_KEY fehlt in Render!');
 }
 
-// ── Initialisierung der KIs ────────────────────────────────
+// ── Initialisierung der KI (Nur noch Gemini) ────────────────
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 app.use(cors({ origin: '*', methods: ['GET','POST','OPTIONS'] }));
 app.use(express.json({ limit: '50kb' }));
 app.use(express.static(__dirname));
 
-// ── Rate Limit (Spam-Schutz für deine Kosten) ───────────────
+// ── Rate Limit (Spam-Schutz) ───────────────
 const chatLimiter = rateLimit({
   windowMs: 60_000, 
   max: 45, 
@@ -76,16 +75,14 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
   }
 });
 
+// ── /api/speech (Audio-Generierung via ElevenLabs) ─────────
 app.post('/api/speech', async (req, res) => {
   try {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: "Kein Text gesendet" });
 
-    // Wir holen uns deinen neuen ElevenLabs-Schlüssel aus den Render-Einstellungen
     const apiKey = process.env.ELEVENLABS_API_KEY; 
-    
-    // Das ist die Voice-ID für "Bella" (eine sehr weiche, angenehme Stimme)
-    const voiceId = 'EXAVITQu4vr4xnSDxMaL'; 
+    const voiceId = 'EXAVITQu4vr4xnSDxMaL'; // Bella Stimme
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
@@ -96,7 +93,7 @@ app.post('/api/speech', async (req, res) => {
       },
       body: JSON.stringify({
         text: text,
-        model_id: "eleven_multilingual_v2", // WICHTIG: Damit sie perfekt Deutsch spricht!
+        model_id: "eleven_multilingual_v2", 
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75
@@ -123,11 +120,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`\n🤖 Robi Server läuft auf Port ${PORT}\n`);
-
-  // Server starten und auf Render-Port lauschen
-const PORT = process.env.PORT || 3000;
+// ── Server Start ───────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Robi Server ist wach und lauscht auf Port ${PORT}`);
+  console.log(`\n🤖 Robi Server ist wach und lauscht auf Port ${PORT}\n`);
 });
