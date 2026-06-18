@@ -82,7 +82,7 @@ app.post('/api/speech', async (req, res) => {
     if (!text) return res.status(400).json({ error: "Kein Text gesendet" });
 
     const apiKey = process.env.ELEVENLABS_API_KEY; 
-    const voiceId = 'MF3mGyEYCl7XYWbV9V6O'; // Bella Stimme
+    const voiceId = '21m00Tcm4TlvDq8ikWAM'; // Bella Stimme
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
