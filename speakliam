@@ -1694,18 +1694,20 @@ function parseForSpeech(text) {
 // PREMIUM KI-STIMME (OpenAI/ElevenLabs Streaming)
 // ════════════════════════════════════════
 
-// Variable, um sich zu merken, ob Bella gerade spricht
+// Variable für das aktuelle Audio
 let currentElevenLabsAudio = null;
+// NEU: Ein Ticket-Zähler, um Überschneidungen zu verhindern!
+let audioRequestToken = 0; 
 
 async function speakLiam(text) {
   if (!text || !text.trim()) return;
 
-  // 🛑 1. DER RADIKALE STOPP-SCHALTER FÜR ALLE STIMMEN!
-  // Falls Katja noch plappert: Mund verbieten!
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-  }
-  // Falls Bella noch einen alten Satz spricht: Abbrechen!
+  // Neues Ticket für diesen Text ziehen
+  const myToken = ++audioRequestToken;
+
+  // 🛑 1. Alle bisherigen Stimmen SOFORT stoppen
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  
   if (currentElevenLabsAudio) {
     currentElevenLabsAudio.pause();
     currentElevenLabsAudio.currentTime = 0;
@@ -1713,8 +1715,6 @@ async function speakLiam(text) {
   }
 
   const robot = document.getElementById('robot');
-  
-  // Robi fängt an zu wackeln
   if (robot) robot.classList.add('talking');
 
   try {
@@ -1724,20 +1724,23 @@ async function speakLiam(text) {
       body: JSON.stringify({ text: text })
     });
 
-    if (!response.ok) {
-      throw new Error(`Server antwortet mit Fehler: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Server antwortet mit Fehler: ${response.status}`);
 
     const audioBlob = await response.blob();
-    const audioUrl = URL.createObjectURL(audioBlob);
     
-    // Neues Audio speichern, damit wir es beim nächsten Mal stoppen können
+    // 🛑 2. DER MAGISCHE CHECK:
+    // Hat der Nutzer in der Wartezeit schon eine neue Nachricht geschickt?
+    // Wenn ja (Ticketnummern passen nicht mehr), werfen wir dieses Audio weg!
+    if (myToken !== audioRequestToken) return;
+
+    // Zur Sicherheit: Katja (Browser-Stimme) nochmals den Mund verbieten
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+    const audioUrl = URL.createObjectURL(audioBlob);
     currentElevenLabsAudio = new Audio(audioUrl);
 
-    // 3. Audio abspielen
     await currentElevenLabsAudio.play();
 
-    // 4. Wenn Robi fertig gesprochen hat
     currentElevenLabsAudio.onended = () => {
       if (robot) robot.classList.remove('talking');
       URL.revokeObjectURL(audioUrl);
@@ -1746,9 +1749,13 @@ async function speakLiam(text) {
 
   } catch (err) {
     console.error('[Premium TTS Error]', err);
-    fallbackSpeak(text);
+    // Nur wenn das noch die aktuellste Anfrage ist, den Fallschirm nutzen
+    if (myToken === audioRequestToken) {
+      fallbackSpeak(text);
+    }
   }
 }
+
 // Unser Sicherheits-Netz (Die alte Browser-Stimme als Fallback)
 function fallbackSpeak(text) {
   if (!('speechSynthesis' in window)) {
@@ -1770,7 +1777,6 @@ function fallbackSpeak(text) {
   
   window.speechSynthesis.speak(utterance);
 }
-
 // Erkenne Emotion des Nutzers (erweiterte Version)
 function detectUserEmotionAdvanced(userText) {
   const lower = userText.toLowerCase();
