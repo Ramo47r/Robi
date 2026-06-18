@@ -1615,69 +1615,11 @@ window.speechSynthesis.onvoiceschanged = () => {
   availableVoices = window.speechSynthesis.getVoices();
 };
 
+// Globale Umleitung: Alles was "speak" ruft, geht jetzt automatisch zu ElevenLabs!
 function speak(text) {
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel(); 
-    
-    // 1. Text bereinigen (Emojis stören den flüssigen Redefluss)
-    const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
-    if (!cleanText) return;
-    
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'de-DE';
-    
-    // 2. DER EMOTIONS-SCANNER: Wie fühlt sich der Text an?
-    const lowerText = cleanText.toLowerCase();
-    
-    // Standard-Modus (Unser genderneutraler, junger Freund)
-    let dynPitch = 1.15; 
-    let dynRate = 1.05;  
-
-    // Modus: Begeistert & Glücklich (Jubel-Worte oder Ausrufezeichen)
-    if (cleanText.includes('!') || /super|toll|klasse|yay|juhu|freu|wunderbar|cool|mega/.test(lowerText)) {
-      dynPitch = 1.35; // Deutlich höhere Stimme = aufgeregt!
-      dynRate = 1.15;  // Schneller sprechen = enthusiastisch!
-    } 
-    // Modus: Neugierig & Fragend
-    else if (cleanText.includes('?')) {
-      dynPitch = 1.25; // Stimme geht leicht hoch (wie bei einer echten Frage)
-      dynRate = 1.0;   // Etwas langsamer, um aufmerksam zuzuhören
-    }
-    // Modus: Tröstend & Sanft
-    else if (/schade|oh|traurig|müde|weinen|tut mir leid|keine sorge|alles gut/.test(lowerText)) {
-      dynPitch = 0.95; // Etwas tiefere, weichere Stimme
-      dynRate = 0.90;  // Ganz langsam und beruhigend sprechen
-    }
-
-    // Werte anwenden
-    utterance.pitch = dynPitch;
-    utterance.rate = dynRate;
-    
-    // 3. Beste verfügbare Stimme im Gerät suchen
-    const preferredVoice = availableVoices.find(v => 
-      v.lang.includes('de') && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Neural'))
-    ) || availableVoices.find(v => v.lang.includes('de'));
-    
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-    }
-    
-    // 4. Robi beim Sprechen animieren
-    utterance.onstart = () => {
-      const robotEl = document.getElementById('robot');
-      if(robotEl) robotEl.classList.add('talking');
-    };
-    
-    utterance.onend = () => {
-      const robotEl = document.getElementById('robot');
-      if(robotEl) robotEl.classList.remove('talking');
-    };
-
-    window.speechSynthesis.speak(utterance);
-  } else {
-    console.warn("Speech Synthesis wird von diesem Browser nicht unterstützt.");
-  }
+  speakLiam(text);
 }
+
 function toggleListen() {
   try {
     if (!SR) {
@@ -1689,7 +1631,7 @@ function toggleListen() {
       if (recognition) try { recognition.stop(); } catch (e) {}
       return;
     }
-    if (synth) synth.cancel();
+    if (typeof synth !== 'undefined' && synth) synth.cancel();
     const robot = document.getElementById('robot');
     if (robot) robot.classList.remove('talking');
     try { recognition.start(); startListening(); }
@@ -1700,42 +1642,46 @@ function toggleListen() {
 }
 
 function startListening() {
-  isListening = true;
-  document.getElementById('micBtn').classList.add('listening');
-  setHint('Ich höre dich... 👂');
-  const robot = document.getElementById('robot');
-  if (robot) { robot.classList.remove('excited','sad','tired'); robot.classList.add('listening'); }
+  isListening = true;
+  document.getElementById('micBtn').classList.add('listening');
+  setHint('Ich höre dich... 👂');
+  const robot = document.getElementById('robot');
+  if (robot) { robot.classList.remove('excited','sad','tired'); robot.classList.add('listening'); }
 }
+
 function stopListening() {
-  isListening = false;
-  document.getElementById('micBtn').classList.remove('listening');
-  setHint('Drück das Mikro und sprich!');
-  const robot = document.getElementById('robot');
-  if (robot) robot.classList.remove('listening');
+  isListening = false;
+  document.getElementById('micBtn').classList.remove('listening');
+  setHint('Drück das Mikro und sprich!');
+  const robot = document.getElementById('robot');
+  if (robot) robot.classList.remove('listening');
 }
 
 // ════════════════════════════════════════
 // SEND MESSAGE
 // ════════════════════════════════════════
 function openTextInput() {
-  document.getElementById('textOverlay').classList.add('show');
-  setTimeout(() => document.getElementById('textInput').focus(), 100);
+  document.getElementById('textOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('textInput').focus(), 100);
 }
+
 function closeTextInput() {
-  document.getElementById('textOverlay').classList.remove('show');
-  document.getElementById('textInput').value = '';
+  document.getElementById('textOverlay').classList.remove('show');
+  document.getElementById('textInput').value = '';
 }
+
 function sendText() {
-  const inp = document.getElementById('textInput');
-  const val = inp.value.trim();
-  if (val) {
-    inp.value = '';
-    closeTextInput();
-    sendMessage(val);
-  }
+  const inp = document.getElementById('textInput');
+  const val = inp.value.trim();
+  if (val) {
+    inp.value = '';
+    closeTextInput();
+    sendMessage(val);
+  }
 }
+
 document.getElementById('textInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') sendText();
+  if (e.key === 'Enter') sendText();
 });
 
 // ════════════════════════════════════════
@@ -1769,8 +1715,7 @@ function validateGenderNeutralLanguage(text) {
 // Parse Text für natürliche Sprechweise (kurze Sätze, Pausen)
 function parseForSpeech(text) {
   text = text.replace(/<[^>]*>/g, '').trim();
-  const sentences = text.match(/[^.!?]*[.!?]+/g) ||
-    [text];
+  const sentences = text.match(/[^.!?]*[.!?]+/g) || [text];
   
   const chunks = [];
   let currentChunk = '';
@@ -1793,7 +1738,7 @@ function parseForSpeech(text) {
 
 // Optimierte Sprachausgabe mit Liams Persönlichkeit (Jetzt hoch-emotional & flüssig)
 // ════════════════════════════════════════
-// PREMIUM KI-STIMME (OpenAI Streaming)
+// PREMIUM KI-STIMME (OpenAI/ElevenLabs Streaming)
 // ════════════════════════════════════════
 
 async function speakLiam(text) {
@@ -2092,10 +2037,12 @@ function openSettings() {
     setTimeout(() => input.focus(), 100);
   }
 }
+
 function closePinPanel() { 
   const panel = document.getElementById('panelPin');
   if (panel) panel.classList.remove('show'); 
 }
+
 function checkPin() {
   const input = document.getElementById('pinInput');
   if (!input) return;
