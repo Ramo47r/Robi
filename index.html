@@ -1694,16 +1694,30 @@ function parseForSpeech(text) {
 // PREMIUM KI-STIMME (OpenAI/ElevenLabs Streaming)
 // ════════════════════════════════════════
 
+// Variable, um sich zu merken, ob Bella gerade spricht
+let currentElevenLabsAudio = null;
+
 async function speakLiam(text) {
   if (!text || !text.trim()) return;
 
+  // 🛑 1. DER RADIKALE STOPP-SCHALTER FÜR ALLE STIMMEN!
+  // Falls Katja noch plappert: Mund verbieten!
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+  // Falls Bella noch einen alten Satz spricht: Abbrechen!
+  if (currentElevenLabsAudio) {
+    currentElevenLabsAudio.pause();
+    currentElevenLabsAudio.currentTime = 0;
+    currentElevenLabsAudio = null;
+  }
+
   const robot = document.getElementById('robot');
   
-  // Robi fängt an zu wackeln, um zu zeigen: "Ich bereite mich aufs Sprechen vor"
+  // Robi fängt an zu wackeln
   if (robot) robot.classList.add('talking');
 
   try {
-    // 1. Wir fragen unseren eigenen Server nach dem perfekten KI-Audio
     const response = await fetch('/api/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1714,29 +1728,27 @@ async function speakLiam(text) {
       throw new Error(`Server antwortet mit Fehler: ${response.status}`);
     }
 
-    // 2. Audio-Stream empfangen und sofort abspielbar machen
     const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
+    
+    // Neues Audio speichern, damit wir es beim nächsten Mal stoppen können
+    currentElevenLabsAudio = new Audio(audioUrl);
 
     // 3. Audio abspielen
-    await audio.play();
+    await currentElevenLabsAudio.play();
 
-    // 4. Wenn Robi fertig gesprochen hat, hört er auf zu wackeln
-    audio.onended = () => {
+    // 4. Wenn Robi fertig gesprochen hat
+    currentElevenLabsAudio.onended = () => {
       if (robot) robot.classList.remove('talking');
-      URL.revokeObjectURL(audioUrl); // Speicherplatz im Handy wieder freigeben (Profi-Tipp!)
+      URL.revokeObjectURL(audioUrl);
+      currentElevenLabsAudio = null;
     };
 
   } catch (err) {
     console.error('[Premium TTS Error]', err);
-    
-    // FALLBACK: Wenn das Internet schlecht ist oder die API klemmt,
-    // stürzt die App nicht ab, sondern nutzt heimlich die normale Browser-Stimme!
     fallbackSpeak(text);
   }
 }
-
 // Unser Sicherheits-Netz (Die alte Browser-Stimme als Fallback)
 function fallbackSpeak(text) {
   if (!('speechSynthesis' in window)) {
