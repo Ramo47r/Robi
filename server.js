@@ -125,4 +125,10 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`\n🤖 Robi Server läuft auf Port ${PORT}\n`);
+
+  // Server starten und auf Render-Port lauschen
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Robi Server ist wach und lauscht auf Port ${PORT}`);
+});
 });
