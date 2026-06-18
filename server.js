@@ -76,29 +76,45 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
   }
 });
 
-// ── /api/speech (Premium Audio-Streaming via OpenAI) ───────
 app.post('/api/speech', async (req, res) => {
-  const { text } = req.body;
-  if (!text) return res.status(400).json({ error: "Kein Text übermittelt" });
-
   try {
-    const mp3Response = await openai.audio.speech.create({
-      model: "tts-1", // tts-1 für geringe Latenz
-      voice: "alloy", // Alloy ist warm und genderneutral
-      input: text,
-      response_format: "mp3"
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: "Kein Text gesendet" });
+
+    // Wir holen uns deinen neuen ElevenLabs-Schlüssel aus den Render-Einstellungen
+    const apiKey = process.env.ELEVENLABS_API_KEY; 
+    
+    // Das ist die Voice-ID für "Bella" (eine sehr weiche, angenehme Stimme)
+    const voiceId = 'EXAVITQu4vr4xnSDxMaL'; 
+
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'audio/mpeg',
+        'xi-api-key': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: "eleven_multilingual_v2", // WICHTIG: Damit sie perfekt Deutsch spricht!
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75
+        }
+      })
     });
 
-    res.set({
-      'Content-Type': 'audio/mpeg',
-      'Transfer-Encoding': 'chunked'
-    });
+    if (!response.ok) {
+      throw new Error("Fehler bei ElevenLabs API");
+    }
 
-    const buffer = Buffer.from(await mp3Response.arrayBuffer());
-    res.send(buffer);
+    const arrayBuffer = await response.arrayBuffer();
+    res.set({ 'Content-Type': 'audio/mpeg' });
+    res.send(Buffer.from(arrayBuffer));
+
   } catch (error) {
-    console.error("Fehler bei OpenAI TTS:", error);
-    res.status(500).json({ error: "Audio Fehler" });
+    console.error("Audio-Server Fehler:", error);
+    res.status(500).json({ error: "Konnte Audio nicht generieren" });
   }
 });
 
