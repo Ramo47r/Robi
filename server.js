@@ -97,7 +97,7 @@ app.post('/api/speech', async (req, res) => {
         text: text,
         model_id: "eleven_multilingual_v2", 
         voice_settings: {
-          stability: 0.85, // Verhindert das Flüstern im Hintergrund
+          stability: 0.45, // Verhindert das Flüstern im Hintergrund
           similarity_boost: 0.75
         }
       })
