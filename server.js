@@ -1,9 +1,5 @@
-// ============================================================
-// Robi Backend — Google Gemini (Chat) & ElevenLabs (Premium Stimme)
-// ============================================================
-import express from 'express';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
+
+
 import { GoogleGenAI } from '@google/genai';
 import { fileURLToPath } from 'url';
 import path from 'path';
