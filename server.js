@@ -1,5 +1,9 @@
-
-
+// ============================================================
+// Robi Backend — Google Gemini (Chat) & ElevenLabs (Premium Stimme)
+// ============================================================
+import express from 'express';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { GoogleGenAI } from '@google/genai';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -78,7 +82,9 @@ app.post('/api/speech', async (req, res) => {
     if (!text) return res.status(400).json({ error: "Kein Text gesendet" });
 
     const apiKey = process.env.ELEVENLABS_API_KEY; 
-    const voiceId = 'MF3mGyEYCl7XYWbV9V6O'; // Bella Stimme
+    
+    // HIER KANNST DU DIE STIMME ÄNDERN (Aktuell: Charlie)
+    const voiceId = 'MF3mGyEYCl7XYWbV9V6O'; 
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
@@ -91,7 +97,7 @@ app.post('/api/speech', async (req, res) => {
         text: text,
         model_id: "eleven_multilingual_v2", 
         voice_settings: {
-          stability: 0.5,
+          stability: 0.85, // Verhindert das Flüstern im Hintergrund
           similarity_boost: 0.75
         }
       })
