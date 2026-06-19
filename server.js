@@ -84,7 +84,7 @@ app.post('/api/speech', async (req, res) => {
     const apiKey = process.env.ELEVENLABS_API_KEY; 
     
     // HIER KANNST DU DIE STIMME ÄNDERN (Aktuell: Charlie)
-    const voiceId = 'MF3mGyEYCl7XYWbV9V6O'; 
+    const voiceId = 'KP4GbmyDmwaoy5dUlvZY'; 
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: 'POST',
