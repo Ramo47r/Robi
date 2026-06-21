@@ -1168,24 +1168,28 @@ let parentPin = localStorage.getItem('robi_pin') || '1234';
 // AGE SELECTION
 // ════════════════════════════════════════
 function selectAge(age) {
+  // 1. Das gewählte Alter speichern
   currentAge = age;
   localStorage.setItem('robi_age', age);
-  const grp = AGE_GROUPS[age];
-  
-  if (grp) {
-    speechRate = grp.rate;
-    speechPitch = grp.pitch;
-    showAgeBubble(grp.greeting);
-    
-    // Bildschirm wechseln und Menü aufbauen
-    showScreen('main');
-    if (typeof initMain === 'function') initMain();
 
-    // 🎯 HIER WIRD ELEVENLABS AUFGERUFEN!
-    speak(grp.greeting);
+  // 2. Den passenden Begrüßungssatz auslesen
+  const greetingText = AGE_GROUPS[age].greeting;
+
+  // 3. Robi den Text sofort vorlesen lassen
+  if (typeof speakLiam === 'function') {
+    speakLiam(greetingText);
+  }
+
+  // 4. Zum Hauptbildschirm wechseln
+  if (typeof showScreen === 'function') {
+    showScreen('main');
+  }
+
+  // 5. Den Chat starten
+  if (typeof initMain === 'function') {
+    initMain();
   }
 }
-
 function goToAgeSelect() {
   if (typeof closeMenu === 'function') closeMenu();
   showScreen('age');
