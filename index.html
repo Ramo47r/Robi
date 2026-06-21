@@ -2095,14 +2095,7 @@ function changePin() {
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
-const savedAge = localStorage.getItem('robi_age');
-if (savedAge && typeof AGE_GROUPS !== 'undefined' && AGE_GROUPS[savedAge]) {
-  if (typeof currentAge !== 'undefined') currentAge = savedAge;
-  if (typeof speechRate !== 'undefined') speechRate = AGE_GROUPS[savedAge].rate;
-  if (typeof speechPitch !== 'undefined') speechPitch = AGE_GROUPS[savedAge].pitch;
-  if (typeof showScreen === 'function') showScreen('main');
-  if (typeof initMain === 'function') initMain();
-}
+
 
 // ════════════════════════════════════════
 // PWA — Service Worker Registration
