@@ -1276,9 +1276,8 @@ function switchMode(mode) {
   } else if (typeof speak === 'function') {
     speak(welcome);
   }
-}
 
-  // Highlight active in menu
+  // Highlight active in menu (Hier war der Fehler! Die Klammer ist jetzt richtig gesetzt)
   document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
   const activeBtn = document.getElementById('m-' + mode);
   if (activeBtn) activeBtn.classList.add('active');
@@ -1295,15 +1294,15 @@ function goToKaraoke() {
 }
 
 function backToMain() {
-  if (synth) synth.cancel();
-  stopKaraoke();
+  if (typeof synth !== 'undefined' && synth) synth.cancel();
+  if (typeof stopKaraoke === 'function') stopKaraoke();
   showScreen('main');
 }
 
 function resetChat() {
-  closeMenu();
+  if (typeof closeMenu === 'function') closeMenu();
   initMain();
-  setHint('Drück das Mikro und sprich!');
+  if (typeof setHint === 'function') setHint('Drück das Mikro und sprich!');
 }
 
 function showScreen(name) {
@@ -1319,7 +1318,6 @@ function showScreen(name) {
     console.error('[showScreen] Fehler:', e.message);
   }
 }
-
 // ════════════════════════════════════════
 // MENU
 // ════════════════════════════════════════
