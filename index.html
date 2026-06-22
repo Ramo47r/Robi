@@ -1172,24 +1172,18 @@ function selectAge(age) {
   currentAge = age;
   localStorage.setItem('robi_age', age);
 
-  // 2. Den passenden Begrüßungssatz auslesen
-  const greetingText = AGE_GROUPS[age].greeting;
-
-  // 3. Robi den Text sofort vorlesen lassen
-  if (typeof speakLiam === 'function') {
-    speakLiam(greetingText);
-  }
-
-  // 4. Zum Hauptbildschirm wechseln
+  // 2. Zum Hauptbildschirm wechseln
   if (typeof showScreen === 'function') {
     showScreen('main');
   }
 
-  // 5. Den Chat starten
+  // 3. Den Chat starten und den Begrüßungssatz an Robi übergeben
+  const greetingText = AGE_GROUPS[age].greeting;
   if (typeof initMain === 'function') {
-    initMain();
+    initMain(greetingText);
   }
 }
+
 function goToAgeSelect() {
   if (typeof closeMenu === 'function') closeMenu();
   showScreen('age');
@@ -1203,24 +1197,36 @@ function showAgeBubble(text) {
   clearTimeout(showAgeBubble._t);
   showAgeBubble._t = setTimeout(() => bubble.classList.remove('show'), 4500);
 }
+
 // ════════════════════════════════════════
 // MAIN SCREEN INIT
 // ════════════════════════════════════════
-function initMain() {
+function initMain(customText = null) {
   if (!messages) messages = [];
   messages = [];
   renderLessonCards();
   updateStarCount();
+  
   const m = MODES[currentMode];
   if (!m) {
     console.warn('[initMain] Mode nicht gefunden:', currentMode);
     return;
   }
-  const welcome = m.welcome[currentAge] || m.welcome['7-9'];
+  
+  // Wenn wir von der Altersauswahl kommen, nimm die Begrüßung. Sonst den Standard-Text.
+  const welcome = customText ? customText : (m.welcome[currentAge] || m.welcome['7-9']);
+  
   setBubble(welcome);
   lastRobiText = welcome;
-  // Tiny delay so screen transition completes before speech starts
-  setTimeout(() => speak(welcome), 200);
+  
+  // Kurze Pause, damit der Bildschirm fertig geladen ist, bevor Robi spricht
+  setTimeout(() => {
+    if (typeof speakLiam === 'function') {
+      speakLiam(welcome);
+    } else if (typeof speak === 'function') {
+      speak(welcome);
+    }
+  }, 200);
 }
 
 function renderLessonCards() {
@@ -1264,7 +1270,13 @@ function switchMode(mode) {
   renderLessonCards();
   setBubble(welcome);
   lastRobiText = welcome;
-  speak(welcome);
+  
+  if (typeof speakLiam === 'function') {
+    speakLiam(welcome);
+  } else if (typeof speak === 'function') {
+    speak(welcome);
+  }
+}
 
   // Highlight active in menu
   document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
