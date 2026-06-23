@@ -1,96 +1,5 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Liam – Dein Freund, der dich wirklich sieht 💜</title>
-<meta name="theme-color" content="#4facfe">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Liam">
-<meta name="description" content="Liam ist dein empathischer Freund. Tiefgründig. Genderneutral. Immer da zum Zuhören.">
-<link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%234ec3ff'/><text y='380' font-size='340' text-anchor='middle' x='256'>🤖</text></svg>">
-<style>
-/* ── NEUE MODERNE SCHRIFTART ── */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap');
-
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-
-/* Weg von Comic Sans - hin zu einer modernen, abgerundeten App-Schrift */
-html, body { 
-  height:100%; 
-  overflow:hidden; 
-  font-family: 'Nunito', ui-rounded, 'SF Pro Rounded', sans-serif; 
-}
-
-/* Neuer, lebendiger Farbverlauf (Sanftes Ozean/Himmel-Blau) */
-body {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  min-height: 100vh;
-  position: relative;
-  overflow: hidden;
-  color: white;
-}
-
-/* ── Animated background clouds (Weicher und moderner) ── */
-#clouds { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
-.cloud {
-  position:absolute;
-  background: radial-gradient(ellipse, rgba(255,255,255,0.4), transparent);
-  border-radius: 50%;
-  filter: blur(20px);
-  animation: cloudDrift linear infinite;
-}
-@keyframes cloudDrift {
-  from { transform: translateX(-150px); }
-  to   { transform: translateX(calc(100vw + 150px)); }
-}
-
-.screen { display:none; flex-direction:column; align-items:center; width:100%; height:100%; padding:0; }
-.screen.active { display:flex; }
-
 /* ════════════════════════════════════════
-   AGE SELECT SCREEN
-═══════════════════════════════════════ */
-#screen-age {
-  justify-content: space-between;
-  text-align: center;
-  z-index: 1;
-  padding: 30px 16px 40px 16px;
-}
-
-.age-top { width: 100%; flex-shrink: 0; }
-.age-greeting {
-  font-size: clamp(24px, 6vw, 32px);
-  font-weight: 900;
-  color: white;
-  letter-spacing: 0.5px;
-  text-shadow: 0 4px 15px rgba(0, 100, 200, 0.4);
-}
-.age-subtitle {
-  font-size: clamp(15px, 4vw, 18px);
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-  margin-top: 8px;
-}
-
-.age-middle {
-  flex: 1; width: 100%;
-  display: flex; align-items: center; justify-content: center;
-  position: relative; min-height: 0;
-}
-
-/* ════════════════════════════════════════
-   AGE SELECT SCREEN - ORIGINAL ZUSTAND
+   AGE SELECT SCREEN - ORIGINAL POSITIONEN
 ═══════════════════════════════════════ */
 .age-scene {
   position: relative;
@@ -103,9 +12,9 @@ body {
 .age-halo {
   position: absolute;
   top: 38%; left: 50%;
-  width: 90%; height: 70%;
+  width: 100%; height: 80%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.3) 0%, transparent 60%);
   pointer-events: none;
   border-radius: 50%;
   animation: haloPulse 4s ease-in-out infinite;
@@ -145,6 +54,7 @@ body {
   font-weight: 800; z-index: 5;
   white-space: nowrap; max-width: 95%;
   overflow: hidden; text-overflow: ellipsis;
+  /* Sanfter Rand und weicher Schatten */
   border: 2px solid rgba(255,255,255,0.8);
   box-shadow: 0 8px 25px rgba(0,0,0,0.15);
   opacity: 0; transition: opacity 0.3s;
@@ -171,6 +81,7 @@ body {
   align-items: center; gap: 4px;
   transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   color: white; font-weight: 800; font-family: inherit;
+  /* 3D Knopf-Effekt */
   box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 15px 20px rgba(0,0,0,0.1);
   border: 2px solid rgba(255,255,255,0.3);
   min-height: 75px;
@@ -183,7 +94,6 @@ body {
 .age-card .age-range { font-size: clamp(16px, 4.5vw, 20px); font-weight: 900; letter-spacing: 0.5px; }
 .age-card .age-desc { font-size: clamp(11px, 3vw, 13px); font-weight: 600; opacity: 0.9; line-height: 1.1; }
 
-/* Neue, etwas knalligere Farben für die Karten */
 .age-1 { --c1: #ff7eb3; --c2: #ff477e; }
 .age-2 { --c1: #4facfe; --c2: #0082fa; }
 .age-3 { --c1: #43e97b; --c2: #18ab4e; }
@@ -203,56 +113,8 @@ body {
 }
 
 /* ════════════════════════════════════════
-   MAIN SCREEN
+   MAIN SCREEN - ORIGINAL POSITIONEN
 ═══════════════════════════════════════ */
-#screen-main {
-  position: relative;
-  padding: 0;
-  justify-content: space-between;
-}
-
-/* TOP BAR */
-.top-bar {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 14px;
-  z-index: 6;
-  flex-shrink: 0;
-}
-
-.top-circle-btn {
-  width: 46px; height: 46px;
-  border-radius: 50%;
-  background: white;
-  border: 3px solid #ffd84d;
-  color: #1a3050;
-  font-size: 20px;
-  cursor: pointer;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.15), 0 6px 14px rgba(0,0,0,0.2);
-  display: flex; align-items: center; justify-content: center;
-  font-family: inherit;
-  font-weight: bold;
-}
-.top-circle-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
-
-/* ROBOT AREA */
-.robi-area {
-  position: relative;
-  width: 100%;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1;
-  min-height: 0;
-  padding: 0 16px;
-}
-
-/* =========================================
-   MAIN SCENE - ORIGINAL ZUSTAND
-   ========================================= */
 .scene {
   position: relative;
   width: min(380px, 88vw);
@@ -268,7 +130,8 @@ body {
   top: 38%; left: 50%;
   width: 100%; height: 80%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 70%);
+  background: radial-gradient(ellipse at center,
+    rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 70%);
   pointer-events: none; z-index: 1; border-radius: 50%;
   animation: haloPulse 4s ease-in-out infinite;
 }
@@ -315,21 +178,22 @@ body {
   50% { transform: translate(-50%, -50%) translateY(-18px); }
 }
 
-/* SPEECH BUBBLE */
+/* ── MODERNE SPRECHBLASE (Milchglas-Effekt) ── */
 .speech-bubble {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   color: #1a3050;
   padding: 12px 18px;
-  border-radius: 22px;
+  border-radius: 24px;
   font-size: clamp(14px, 3.8vw, 17px);
-  font-weight: 600;
+  font-weight: 800;
   z-index: 5;
   text-align: center;
   max-width: min(440px, 92vw);
   width: calc(100% - 32px);
   margin: 0 16px;
-  border: 4px solid #ffd84d;
-  box-shadow: 0 6px 0 rgba(0,0,0,0.15), 0 8px 20px rgba(0,0,0,0.2);
+  border: 2px solid rgba(255,255,255,0.8);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
   line-height: 1.4;
   min-height: 50px;
   display: flex;
@@ -347,18 +211,18 @@ body {
   width: 0; height: 0;
   border-left: 12px solid transparent;
   border-right: 12px solid transparent;
-  border-bottom: 14px solid #ffd84d;
+  border-bottom: 14px solid rgba(255,255,255,0.8);
 }
 .speech-bubble::after {
   content: '';
   position: absolute;
-  top: -8px;
+  top: -11px;
   left: 50%;
   transform: translateX(-50%);
   width: 0; height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-bottom: 8px solid white;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 11px solid white;
   z-index: 1;
 }
 
@@ -393,64 +257,35 @@ body {
   50%       { transform: translateY(-30px) rotate(180deg) scale(1.2); }
 }
 
-@keyframes dotPulse {
-  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-  40%           { opacity: 1;   transform: scale(1.2); }
-}
-
-@keyframes sparkFloat {
-  0%, 100% { opacity: 0; transform: translateY(0) rotate(0deg) scale(0.5); }
-  20%, 80% { opacity: 1; }
-  50%      { transform: translateY(-30px) rotate(180deg) scale(1.2); }
-}
-/* ════════════════════════════════════════
-   BOTTOM ACTION AREA — Big mic + scrollable lesson cards
-═══════════════════════════════════════ */
-.bottom-area {
-  width: 100%;
-  z-index: 5;
-  flex-shrink: 0;
-  padding: 0 0 12px 0;
-}
-
-/* Lesson cards row — like Buddy.ai's lesson selector */
-.lesson-row {
-  display: flex;
-  gap: 10px;
-  padding: 8px 14px 6px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
-.lesson-row::-webkit-scrollbar { display: none; }
-
-.lesson-card {
-  flex-shrink: 0;
-  scroll-snap-align: center;
-  background: linear-gradient(135deg, var(--c1), var(--c2));
-  border: 3px solid white;
-  border-radius: 18px;
-  padding: 10px 6px;
-  width: 92px;
-  min-height: 76px;
-  cursor: pointer;
+/* ── MODERNE MOOD BUTTONS ── */
+.mood-side {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: white;
-  font-weight: bold;
-  font-family: inherit;
-  font-size: 11px;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.2), 0 6px 14px rgba(0,0,0,0.2);
-  text-align: center;
+  gap: 6px;
+  z-index: 5;
 }
-.lesson-card:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
-.lesson-card.active {
-  border-color: #ffd84d;
-  box-shadow: 0 0 14px rgba(255,216,77,0.8), 0 4px 0 rgba(0,0,0,0.2);
+.mood-pill {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255,255,255,0.8);
+  border-radius: 50%;
+  width: 36px; height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.mood-pill:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.1); }
+.mood-pill.selected {
+  background: #fddb69;
+  border-color: white;
+  transform: scale(1.15);
+  box-shadow: 0 0 14px rgba(253, 219, 105, 0.9);
 }
 .lesson-card .lesson-icon { font-size: 28px; line-height: 1; }
 .lesson-card .lesson-label { line-height: 1.1; }
