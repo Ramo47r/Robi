@@ -93,9 +93,10 @@ body {
 
 .age-scene {
   position: relative;
-  width: min(300px, 75vw);
+  width: min(320px, 80vw);
   height: 100%;
   max-height: min(380px, 52vh);
+  margin: 0 auto; /* Zentriert alles */
   display: flex; align-items: center; justify-content: center;
 }
 
@@ -117,16 +118,28 @@ body {
   pointer-events: none; z-index: 2;
   filter: drop-shadow(0 0 30px rgba(0, 200, 255, 0.7));
 }
-.age-platform img { display: block; width: 100%; height: auto; }
+.age-platform img { 
+  display: block; 
+  width: 100%; 
+  height: auto; 
+  object-fit: contain; /* Verhindert das Quetschen der Plattform */
+}
 
 .age-robot-wrap {
-  position: absolute; top: 10%; left: 0%;
+  position: absolute; 
+  top: 40%; /* Perfekt über der Plattform */
+  left: 50%; /* Perfekt in der Mitte */
   transform: translate(-50%, -50%);
   width: 86%; z-index: 3;
   animation: robotFloat 3.6s ease-in-out infinite;
   filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
 }
-.age-robot-wrap img { display: block; width: 100%; height: auto; }
+.age-robot-wrap img { 
+  display: block; 
+  width: 100%; 
+  height: auto; 
+  object-fit: contain; /* Verhindert das Quetschen von Robi */
+}
 .age-robot-wrap.talking {
   animation: robotFloat 3.6s ease-in-out infinite, robotTalk 0.4s ease-in-out infinite;
 }
@@ -195,14 +208,14 @@ body {
   50%       { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
 }
 @keyframes robotFloat {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-12px); }
+  /* HIER WAR DER FEHLER: Wir müssen translate(-50%, -50%) behalten, sonst rutscht er aus der Mitte! */
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50%       { transform: translate(-50%, -50%) translateY(-12px); }
 }
 @keyframes robotTalk {
   0%, 100% { filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3)); }
   50%       { filter: drop-shadow(0 12px 40px rgba(0,220,255,.85)); }
 }
-
 /* ════════════════════════════════════════
    MAIN SCREEN — Buddy.ai style
 ═══════════════════════════════════════ */
