@@ -1,3 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Liam – Dein Freund, der dich wirklich sieht 💜</title>
+<meta name="theme-color" content="#4facfe">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Liam">
+<meta name="description" content="Liam ist dein empathischer Freund. Tiefgründig. Genderneutral. Immer da zum Zuhören.">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%234ec3ff'/><text y='380' font-size='340' text-anchor='middle' x='256'>🤖</text></svg>">
+<style>
+/* ── NEUE MODERNE SCHRIFTART ── */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+/* Weg von Comic Sans - hin zu einer modernen, abgerundeten App-Schrift */
+html, body { 
+  height:100%; 
+  overflow:hidden; 
+  font-family: 'Nunito', ui-rounded, 'SF Pro Rounded', sans-serif; 
+}
+
+/* Neuer, lebendiger Farbverlauf (Sanftes Ozean/Himmel-Blau) */
+body {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  color: white;
+}
+
+/* ── Animated background clouds (Weicher und moderner) ── */
+#clouds { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.cloud {
+  position:absolute;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.4), transparent);
+  border-radius: 50%;
+  filter: blur(20px);
+  animation: cloudDrift linear infinite;
+}
+@keyframes cloudDrift {
+  from { transform: translateX(-150px); }
+  to   { transform: translateX(calc(100vw + 150px)); }
+}
+
+.screen { display:none; flex-direction:column; align-items:center; width:100%; height:100%; padding:0; }
+.screen.active { display:flex; }
+
+/* ════════════════════════════════════════
+   AGE SELECT SCREEN STRUKTUR
+═══════════════════════════════════════ */
+#screen-age {
+  justify-content: space-between;
+  text-align: center;
+  z-index: 1;
+  padding: 30px 16px 40px 16px;
+}
+.age-top { width: 100%; flex-shrink: 0; }
+.age-greeting {
+  font-size: clamp(24px, 6vw, 32px);
+  font-weight: 900;
+  color: white;
+  letter-spacing: 0.5px;
+  text-shadow: 0 4px 15px rgba(0, 100, 200, 0.4);
+}
+.age-subtitle {
+  font-size: clamp(15px, 4vw, 18px);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 8px;
+}
+.age-middle {
+  flex: 1; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; min-height: 0;
+}
+
 /* ════════════════════════════════════════
    AGE SELECT SCREEN - ORIGINAL POSITIONEN
 ═══════════════════════════════════════ */
@@ -54,7 +143,6 @@
   font-weight: 800; z-index: 5;
   white-space: nowrap; max-width: 95%;
   overflow: hidden; text-overflow: ellipsis;
-  /* Sanfter Rand und weicher Schatten */
   border: 2px solid rgba(255,255,255,0.8);
   box-shadow: 0 8px 25px rgba(0,0,0,0.15);
   opacity: 0; transition: opacity 0.3s;
@@ -81,7 +169,6 @@
   align-items: center; gap: 4px;
   transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   color: white; font-weight: 800; font-family: inherit;
-  /* 3D Knopf-Effekt */
   box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 15px 20px rgba(0,0,0,0.1);
   border: 2px solid rgba(255,255,255,0.3);
   min-height: 75px;
@@ -110,6 +197,48 @@
 @keyframes robotTalk {
   0%, 100% { filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3)); }
   50%       { filter: drop-shadow(0 12px 40px rgba(0,220,255,.85)); }
+}
+
+/* ── MAIN SCREEN STRUKTUR ── */
+#screen-main {
+  position: relative;
+  padding: 0;
+  justify-content: space-between;
+}
+.top-bar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  z-index: 6;
+  flex-shrink: 0;
+}
+.top-circle-btn {
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid #ffd84d;
+  color: #1a3050;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.15), 0 6px 14px rgba(0,0,0,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+  font-weight: bold;
+}
+.top-circle-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+
+.robi-area {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  min-height: 0;
+  padding: 0 16px;
 }
 
 /* ════════════════════════════════════════
@@ -178,7 +307,7 @@
   50% { transform: translate(-50%, -50%) translateY(-18px); }
 }
 
-/* ── MODERNE SPRECHBLASE (Milchglas-Effekt) ── */
+/* ── SPRECHBLASE (Milchglas-Effekt) ── */
 .speech-bubble {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
@@ -257,7 +386,7 @@
   50%       { transform: translateY(-30px) rotate(180deg) scale(1.2); }
 }
 
-/* ── MODERNE MOOD BUTTONS ── */
+/* ── MOOD BUTTONS ── */
 .mood-side {
   position: absolute;
   right: 8px;
@@ -287,349 +416,6 @@
   transform: scale(1.15);
   box-shadow: 0 0 14px rgba(253, 219, 105, 0.9);
 }
-.lesson-card .lesson-icon { font-size: 28px; line-height: 1; }
-.lesson-card .lesson-label { line-height: 1.1; }
-
-.mode-stories  { --c1: #ff9eb1; --c2: #e8467a; }
-.mode-learn    { --c1: #6bd4ff; --c2: #2d8fe8; }
-.mode-jokes    { --c1: #ffd062; --c2: #ff8a2a; }
-.mode-creative { --c1: #c896ff; --c2: #8852e8; }
-.mode-karaoke  { --c1: #ff96be; --c2: #d44280; }
-.mode-talk     { --c1: #6cf5b9; --c2: #1ab87e; }
-.mode-homework { --c1: #ffb088; --c2: #cc6699; }
-.mode-guess    { --c1: #ffb088; --c2: #e8632a; }
-.mode-iSpy     { --c1: #88e8ff; --c2: #00aacc; }
-.mode-wouldYou { --c1: #f8b4d9; --c2: #d859a9; }
-
-/* Big mic button — Buddy.ai style — DOMINANT and centered */
-.mic-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 4px 14px 0;
-  position: relative;
-}
-
-.big-mic {
-  flex-shrink: 0;
-  width: clamp(90px, 24vw, 110px);
-  height: clamp(90px, 24vw, 110px);
-  border-radius: 50%;
-  border: 5px solid white;
-  background: linear-gradient(135deg, #ffd84d, #ff9020);
-  color: white;
-  font-size: clamp(40px, 11vw, 50px);
-  cursor: pointer;
-  box-shadow: 0 8px 0 rgba(0,0,0,0.2), 0 10px 24px rgba(255, 144, 32, 0.7), 0 0 0 0 rgba(255, 200, 80, 0.7);
-  transition: transform 0.15s, box-shadow 0.15s;
-  display: flex; align-items: center; justify-content: center;
-  font-family: inherit;
-  position: relative;
-}
-.big-mic:active:not(:disabled) {
-  transform: translateY(4px);
-  box-shadow: 0 4px 0 rgba(0,0,0,0.2), 0 6px 14px rgba(255, 144, 32, 0.6);
-}
-.big-mic.listening {
-  background: linear-gradient(135deg, #ff5577, #cc2244);
-  animation: pulseListen 1.2s ease-out infinite;
-}
-@keyframes pulseListen {
-  0% { box-shadow: 0 8px 0 rgba(0,0,0,0.2), 0 10px 24px rgba(255,80,120,0.7), 0 0 0 0 rgba(255,80,120,0.8); }
-  100% { box-shadow: 0 8px 0 rgba(0,0,0,0.2), 0 10px 24px rgba(255,80,120,0.5), 0 0 0 28px rgba(255,80,120,0); }
-}
-.big-mic:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* Side action buttons */
-.side-btn {
-  width: 56px; height: 56px;
-  border-radius: 50%;
-  border: 3px solid white;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-family: inherit;
-  font-size: 22px;
-  color: white;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.2), 0 6px 14px rgba(0,0,0,0.25);
-  transition: transform 0.15s;
-  flex-shrink: 0;
-}
-.side-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
-.side-btn.keyboard { background: linear-gradient(135deg, #6cf5b9, #1ab87e); }
-.side-btn.repeat { background: linear-gradient(135deg, #c896ff, #8852e8); }
-
-/* Mic label/hint */
-.mic-hint {
-  text-align: center;
-  font-size: 12px;
-  color: white;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  font-weight: bold;
-  margin-top: 6px;
-  min-height: 16px;
-}
-
-/* TEXT INPUT MODE (overlay) */
-.text-overlay {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  background: white;
-  padding: 16px 14px;
-  border-top-left-radius: 24px;
-  border-top-right-radius: 24px;
-  box-shadow: 0 -8px 30px rgba(0,0,0,0.3);
-  z-index: 25;
-  transform: translateY(100%);
-  transition: transform 0.3s;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.text-overlay.show { transform: translateY(0); }
-
-.text-overlay input {
-  flex: 1;
-  padding: 14px 18px;
-  border: 3px solid #ffd84d;
-  background: #f5f9ff;
-  border-radius: 50px;
-  font-size: 15px;
-  outline: none;
-  font-family: inherit;
-  font-weight: 500;
-  min-width: 0;
-  color: #1a3050;
-}
-.text-overlay input:focus { border-color: #ff9020; background: white; }
-
-.text-overlay .send {
-  width: 50px; height: 50px;
-  border-radius: 50%;
-  border: 3px solid white;
-  background: linear-gradient(135deg, #ffd84d, #ff9020);
-  color: white;
-  font-size: 22px;
-  cursor: pointer;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.2);
-  flex-shrink: 0;
-}
-.text-overlay .close {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  border: 2px solid #aab;
-  background: white;
-  color: #555;
-  font-size: 18px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-/* ════════════════════════════════════════
-   MENU DRAWER
-═══════════════════════════════════════ */
-.menu-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0);
-  z-index: 30;
-  pointer-events: none;
-  transition: background 0.3s;
-}
-.menu-overlay.show {
-  background: rgba(0,0,0,0.5);
-  pointer-events: all;
-}
-
-.menu-drawer {
-  position: fixed;
-  top: 0; left: 0;
-  bottom: 0;
-  width: min(280px, 80vw);
-  background: linear-gradient(180deg, #4ec3ff 0%, #6b8eff 100%);
-  border-right: 3px solid white;
-  z-index: 31;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease-out;
-  display: flex;
-  flex-direction: column;
-  padding: 18px 14px;
-  overflow-y: auto;
-  color: white;
-  box-shadow: 4px 0 20px rgba(0,0,0,0.3);
-}
-.menu-drawer.show { transform: translateX(0); }
-
-.menu-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 4px;
-  text-shadow: 0 3px 0 #2196f3;
-}
-.menu-subtitle {
-  font-size: 12px;
-  opacity: 0.85;
-  margin-bottom: 14px;
-}
-
-.menu-section-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  opacity: 0.85;
-  margin: 12px 0 6px;
-  font-weight: bold;
-}
-
-.menu-item {
-  background: linear-gradient(135deg, var(--c1), var(--c2));
-  border: 3px solid white;
-  border-radius: 16px;
-  padding: 11px 14px;
-  margin-bottom: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: white;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: bold;
-  width: 100%;
-  text-align: left;
-  box-shadow: 0 3px 0 rgba(0,0,0,0.2);
-}
-.menu-item:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.2); }
-.menu-item .menu-icon { font-size: 22px; flex-shrink: 0; }
-.menu-item.active {
-  border-color: #ffd84d;
-  box-shadow: 0 0 14px rgba(255,216,77,0.7), 0 3px 0 rgba(0,0,0,0.2);
-}
-
-.menu-mode-talk       { --c1: #6cf5b9; --c2: #1ab87e; }
-.menu-mode-homework   { --c1: #ffb088; --c2: #cc6699; }
-.menu-mode-stories    { --c1: #ff9eb1; --c2: #e8467a; }
-.menu-mode-learn      { --c1: #6bd4ff; --c2: #2d8fe8; }
-.menu-mode-jokes      { --c1: #ffd062; --c2: #ff8a2a; }
-.menu-mode-creative   { --c1: #c896ff; --c2: #8852e8; }
-.menu-mode-guess      { --c1: #ffb088; --c2: #e8632a; }
-.menu-mode-iSpy       { --c1: #88e8ff; --c2: #00aacc; }
-.menu-mode-wouldYou   { --c1: #f8b4d9; --c2: #d859a9; }
-.menu-mode-karaoke    { --c1: #ff96be; --c2: #d44280; }
-
-.menu-action {
-  background: rgba(255,255,255,0.15);
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: 12px;
-  padding: 10px 14px;
-  margin-bottom: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: white;
-  font-family: inherit;
-  font-size: 13px;
-  width: 100%;
-  text-align: left;
-}
-.menu-action:active { background: rgba(255,255,255,0.25); }
-
-/* ════════════════════════════════════════
-   PARENT PANEL
-═══════════════════════════════════════ */
-.panel {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
-  display: none; align-items: center; justify-content: center;
-  z-index: 40; padding: 20px;
-}
-.panel.show { display: flex; }
-.panel-inner {
-  background: white; border-radius: 24px; padding: 24px;
-  max-width: 400px; width: 100%; color: #1a3050;
-  max-height: 90vh; overflow-y: auto;
-  border: 4px solid #ffd84d;
-  font-family: inherit;
-}
-.panel h2 { margin-bottom: 10px; font-size: 20px; color: #ff9020; }
-.panel label { display: block; margin: 12px 0 5px; font-size: 13px; font-weight: bold; }
-.panel select, .panel input[type=range], .panel input[type=password], .panel input[type=text] {
-  width: 100%; padding: 8px; border: 2px solid #99c; border-radius: 10px;
-  font-size: 14px; font-family: inherit;
-}
-.panel button {
-  margin-top: 8px; padding: 12px 18px;
-  background: linear-gradient(135deg, #ffd84d, #ff9020);
-  color: white; border: 3px solid white;
-  border-radius: 50px; cursor: pointer; font-size: 15px;
-  width: 100%; font-weight: bold; font-family: inherit;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.15);
-}
-.panel button.cancel { background: #aab; }
-
-.pin-hint {
-  background: #fff3cd; padding: 10px 14px;
-  border-radius: 10px; font-size: 13px;
-  margin: 8px 0; color: #664;
-}
-
-/* KARAOKE */
-.song-list { display: flex; flex-direction: column; gap: 10px; padding: 8px 16px; max-width: 480px; width: 100%; }
-.song-btn {
-  background: linear-gradient(90deg, #ff96be, #d44280);
-  border: 3px solid white;
-  border-radius: 18px;
-  padding: 14px 16px;
-  color: white;
-  font-weight: bold;
-  font-family: inherit;
-  font-size: clamp(13px, 3.4vw, 15px);
-  cursor: pointer;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.2);
-}
-.song-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
-.song-btn .song-icon { font-size: 26px; }
-
-
-/* ── Robi keyframe animations ── */
-/* Idle: very gentle float — calm and friendly */
-@keyframes robiIdle {
-  0%   { transform: translate(-50%, -50%) translateY(0px); }
-  50%  { transform: translate(-50%, -50%) translateY(-14px); }
-  100% { transform: translate(-50%, -50%) translateY(0px); }
-}
-/* Talking: subtle head bob — not hectic */
-@keyframes robiTalk {
-  0%,100% { transform: translate(-50%, -50%) translateY(-4px) rotate(0deg); }
-  30%     { transform: translate(-50%, -50%) translateY(-10px) rotate(0.5deg); }
-  70%     { transform: translate(-50%, -50%) translateY(-2px)  rotate(-0.4deg); }
-}
-/* Listening: lean in gently */
-@keyframes robiListen {
-  0%,100% { transform: translate(-50%, -50%) translateY(-2px) scale(1); }
-  50%     { transform: translate(-50%, -50%) translateY(-8px)  scale(1.02); }
-}
-/* Joy: happy bounce — smooth arcs */
-@keyframes robiJoy {
-  0%,100% { transform: translate(-50%, -50%) translateY(0px) rotate(0deg); }
-  30%     { transform: translate(-50%, -50%) translateY(-18px) rotate(1.5deg); }
-  60%     { transform: translate(-50%, -50%) translateY(-8px)  rotate(-1deg); }
-  80%     { transform: translate(-50%, -50%) translateY(-14px) rotate(0.8deg); }
-}
-/* Sad: slow gentle drop */
-@keyframes robiSad {
-  0%,100% { transform: translate(-50%, -50%) translateY(0px) rotate(-1deg); }
-  50%     { transform: translate(-50%, -50%) translateY(-4px) rotate(1deg); }
-}
-/* Tired: very slow nod */
-@keyframes robiTired {
-  0%,100% { transform: translate(-50%, -50%) translateY(0px) rotate(-1.5deg); }
-  50%     { transform: translate(-50%, -50%) translateY(-3px) rotate(1.5deg); }
-}
 </style>
 </head>
 <body>
@@ -646,7 +432,7 @@
   </div>
 
   <div class="age-middle">
-    <div class=".scene">
+    <div class="age-scene">
       <div class="age-halo"></div>
       <div class="age-bubble" id="ageBubble"></div>
       <div class="age-platform">
@@ -863,13 +649,13 @@ let starCount = parseInt(localStorage.getItem('robi_stars') || '0');
 const AGE_GROUPS = {
   // 🎯 JETZT NATÜRLICH, JUNG & GENDERNEUTRAL — Kein piepsiger Comic-Sound mehr!
   '1-3':  { label: '🍼 1-3 Jahre',  rate: 0.98, pitch: 1.15,
-             greeting: 'Hallo! Ich bin Robi! Schön, dass du da bist!' },
+             greeting: 'Hallo mein Schatz! Ich bin Robi! Schön, dass du da bist!' },
   '4-6':  { label: '🎈 4-6 Jahre',  rate: 0.98, pitch: 1.15,
-             greeting: 'Hallo! Ich bin Robi! Schön, dass du da bist' },
+             greeting: 'Hallo! Ich bin Robi, dein Freund! Was machen wir heute?' },
   '7-9':  { label: '🎒 7-9 Jahre',  rate: 1.02, pitch: 1.15,
-             greeting: 'Hallo! Ich bin Robi! Schön, dass du da bist' },
+             greeting: 'Hi! Ich bin Robi! Worauf hast du heute Lust?' },
   '10-12':{ label: '🎮 10-12 Jahre', rate: 1.05, pitch: 1.15,
-             greeting: 'Hallo! Ich bin Robi! Schön, dass du da bist' },
+             greeting: 'Hey! Ich bin Robi. Was wollen wir heute machen?' },
 };
 
 // Modes — like Buddy.ai's "lessons" / "categories"
@@ -990,65 +776,102 @@ let parentPin = localStorage.getItem('robi_pin') || '1234';
 // AGE SELECTION
 // ════════════════════════════════════════
 function selectAge(age) {
-  // 1. Das gewählte Alter speichern
   currentAge = age;
   localStorage.setItem('robi_age', age);
+  const grp = AGE_GROUPS[age];
+  speechRate = grp.rate;
+  speechPitch = grp.pitch;
 
-  // 2. Zum Hauptbildschirm wechseln
-  if (typeof showScreen === 'function') {
+  showAgeBubble(grp.greeting);
+
+  // First, wait for speech to actually start speaking on mobile
+  // (browser audio policy requires user interaction)
+  speakOnAge(grp.greeting, () => {
+    // Only switch screens AFTER speech has started/finished
     showScreen('main');
-  }
-
-  // 3. Den Chat starten und den Begrüßungssatz an Robi übergeben
-  const greetingText = AGE_GROUPS[age].greeting;
-  if (typeof initMain === 'function') {
-    initMain(greetingText);
-  }
+    initMain();
+  });
 }
 
 function goToAgeSelect() {
-  if (typeof closeMenu === 'function') closeMenu();
+  closeMenu();
+  if (synth) synth.cancel();
   showScreen('age');
 }
 
 function showAgeBubble(text) {
   const bubble = document.getElementById('ageBubble');
-  if (!bubble) return;
   bubble.textContent = text;
   bubble.classList.add('show');
   clearTimeout(showAgeBubble._t);
   showAgeBubble._t = setTimeout(() => bubble.classList.remove('show'), 4500);
 }
 
+function speakOnAge(text, onDone) {
+  let isDone = false;
+  function finishCallback() {
+    if (isDone) return;
+    isDone = true;
+    if (onDone) onDone();
+  }
+
+  if (!synth) { 
+    setTimeout(finishCallback, 500); 
+    return; 
+  }
+
+  synth.cancel();
+  const r = document.getElementById('robot'); // Angepasst auf deine ID "robot"
+  if (r) r.classList.add('talking');
+
+  // Emojis für den Redefluss entfernen
+  const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+
+  const utter = new SpeechSynthesisUtterance(cleanText);
+  
+  // Premium-Stimmen-Filterung
+  const voice = availableVoices.find(v => 
+    v.lang.includes('de') && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Neural'))
+  ) || availableVoices.find(v => v.lang.includes('de'));
+  
+  if (voice) utter.voice = voice;
+  utter.lang = 'de-DE';
+  utter.rate = speechRate || 1.05;
+  utter.pitch = speechPitch || 1.15;
+  utter.volume = 1.0;
+
+  utter.onend = () => { 
+    if (r) r.classList.remove('talking');
+    finishCallback();
+  };
+  utter.onerror = (err) => { 
+    if (r) r.classList.remove('talking');
+    finishCallback();
+  };
+  synth.speak(utter);
+
+  const estimatedMs = Math.max(2500, cleanText.length * 75);
+  setTimeout(finishCallback, estimatedMs);
+}
+
 // ════════════════════════════════════════
 // MAIN SCREEN INIT
 // ════════════════════════════════════════
-function initMain(customText = null) {
+function initMain() {
   if (!messages) messages = [];
   messages = [];
   renderLessonCards();
   updateStarCount();
-  
   const m = MODES[currentMode];
   if (!m) {
     console.warn('[initMain] Mode nicht gefunden:', currentMode);
     return;
   }
-  
-  // Wenn wir von der Altersauswahl kommen, nimm die Begrüßung. Sonst den Standard-Text.
-  const welcome = customText ? customText : (m.welcome[currentAge] || m.welcome['7-9']);
-  
+  const welcome = m.welcome[currentAge] || m.welcome['7-9'];
   setBubble(welcome);
   lastRobiText = welcome;
-  
-  // Kurze Pause, damit der Bildschirm fertig geladen ist, bevor Robi spricht
-  setTimeout(() => {
-    if (typeof speakLiam === 'function') {
-      speakLiam(welcome);
-    } else if (typeof speak === 'function') {
-      speak(welcome);
-    }
-  }, 200);
+  // Tiny delay so screen transition completes before speech starts
+  setTimeout(() => speak(welcome), 200);
 }
 
 function renderLessonCards() {
@@ -1092,14 +915,9 @@ function switchMode(mode) {
   renderLessonCards();
   setBubble(welcome);
   lastRobiText = welcome;
-  
-  if (typeof speakLiam === 'function') {
-    speakLiam(welcome);
-  } else if (typeof speak === 'function') {
-    speak(welcome);
-  }
+  speak(welcome);
 
-  // Highlight active in menu (Hier war der Fehler! Die Klammer ist jetzt richtig gesetzt)
+  // Highlight active in menu
   document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
   const activeBtn = document.getElementById('m-' + mode);
   if (activeBtn) activeBtn.classList.add('active');
@@ -1116,15 +934,15 @@ function goToKaraoke() {
 }
 
 function backToMain() {
-  if (typeof synth !== 'undefined' && synth) synth.cancel();
-  if (typeof stopKaraoke === 'function') stopKaraoke();
+  if (synth) synth.cancel();
+  stopKaraoke();
   showScreen('main');
 }
 
 function resetChat() {
-  if (typeof closeMenu === 'function') closeMenu();
+  closeMenu();
   initMain();
-  if (typeof setHint === 'function') setHint('Drück das Mikro und sprich!');
+  setHint('Drück das Mikro und sprich!');
 }
 
 function showScreen(name) {
@@ -1140,6 +958,7 @@ function showScreen(name) {
     console.error('[showScreen] Fehler:', e.message);
   }
 }
+
 // ════════════════════════════════════════
 // MENU
 // ════════════════════════════════════════
@@ -1203,14 +1022,6 @@ function setHint(text) {
 }
 
 function updateStarCount() {
-  function updateStarCount(stars) {
-  const starElement = document.getElementById('starCount');
-  
-  // PROFITRICK: Wenn das Element fehlt, brechen wir lautlos ab, ohne Fehler zu werfen!
-  if (!starElement) return; 
-  
-  starElement.textContent = stars; // oder innerText, je nachdem was da stand
-}
   const starCountEl = document.getElementById('starCount');
   if (starCountEl) {
     starCountEl.textContent = starCount;
@@ -1404,11 +1215,69 @@ window.speechSynthesis.onvoiceschanged = () => {
   availableVoices = window.speechSynthesis.getVoices();
 };
 
-// Globale Umleitung: Alles was "speak" ruft, geht jetzt automatisch zu ElevenLabs!
 function speak(text) {
-  speakLiam(text);
-}
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel(); 
+    
+    // 1. Text bereinigen (Emojis stören den flüssigen Redefluss)
+    const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+    if (!cleanText) return;
+    
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = 'de-DE';
+    
+    // 2. DER EMOTIONS-SCANNER: Wie fühlt sich der Text an?
+    const lowerText = cleanText.toLowerCase();
+    
+    // Standard-Modus (Unser genderneutraler, junger Freund)
+    let dynPitch = 1.15; 
+    let dynRate = 1.05;  
 
+    // Modus: Begeistert & Glücklich (Jubel-Worte oder Ausrufezeichen)
+    if (cleanText.includes('!') || /super|toll|klasse|yay|juhu|freu|wunderbar|cool|mega/.test(lowerText)) {
+      dynPitch = 1.35; // Deutlich höhere Stimme = aufgeregt!
+      dynRate = 1.15;  // Schneller sprechen = enthusiastisch!
+    } 
+    // Modus: Neugierig & Fragend
+    else if (cleanText.includes('?')) {
+      dynPitch = 1.25; // Stimme geht leicht hoch (wie bei einer echten Frage)
+      dynRate = 1.0;   // Etwas langsamer, um aufmerksam zuzuhören
+    }
+    // Modus: Tröstend & Sanft
+    else if (/schade|oh|traurig|müde|weinen|tut mir leid|keine sorge|alles gut/.test(lowerText)) {
+      dynPitch = 0.95; // Etwas tiefere, weichere Stimme
+      dynRate = 0.90;  // Ganz langsam und beruhigend sprechen
+    }
+
+    // Werte anwenden
+    utterance.pitch = dynPitch;
+    utterance.rate = dynRate;
+    
+    // 3. Beste verfügbare Stimme im Gerät suchen
+    const preferredVoice = availableVoices.find(v => 
+      v.lang.includes('de') && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Neural'))
+    ) || availableVoices.find(v => v.lang.includes('de'));
+    
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    
+    // 4. Robi beim Sprechen animieren
+    utterance.onstart = () => {
+      const robotEl = document.getElementById('robot');
+      if(robotEl) robotEl.classList.add('talking');
+    };
+    
+    utterance.onend = () => {
+      const robotEl = document.getElementById('robot');
+      if(robotEl) robotEl.classList.remove('talking');
+    };
+
+    window.speechSynthesis.speak(utterance);
+  } else {
+    console.warn("Speech Synthesis wird von diesem Browser nicht unterstützt.");
+  }
+}
 function toggleListen() {
   try {
     if (!SR) {
@@ -1420,7 +1289,7 @@ function toggleListen() {
       if (recognition) try { recognition.stop(); } catch (e) {}
       return;
     }
-    if (typeof synth !== 'undefined' && synth) synth.cancel();
+    if (synth) synth.cancel();
     const robot = document.getElementById('robot');
     if (robot) robot.classList.remove('talking');
     try { recognition.start(); startListening(); }
@@ -1431,46 +1300,42 @@ function toggleListen() {
 }
 
 function startListening() {
-  isListening = true;
-  document.getElementById('micBtn').classList.add('listening');
-  setHint('Ich höre dich... 👂');
-  const robot = document.getElementById('robot');
-  if (robot) { robot.classList.remove('excited','sad','tired'); robot.classList.add('listening'); }
+  isListening = true;
+  document.getElementById('micBtn').classList.add('listening');
+  setHint('Ich höre dich... 👂');
+  const robot = document.getElementById('robot');
+  if (robot) { robot.classList.remove('excited','sad','tired'); robot.classList.add('listening'); }
 }
-
 function stopListening() {
-  isListening = false;
-  document.getElementById('micBtn').classList.remove('listening');
-  setHint('Drück das Mikro und sprich!');
-  const robot = document.getElementById('robot');
-  if (robot) robot.classList.remove('listening');
+  isListening = false;
+  document.getElementById('micBtn').classList.remove('listening');
+  setHint('Drück das Mikro und sprich!');
+  const robot = document.getElementById('robot');
+  if (robot) robot.classList.remove('listening');
 }
 
 // ════════════════════════════════════════
 // SEND MESSAGE
 // ════════════════════════════════════════
 function openTextInput() {
-  document.getElementById('textOverlay').classList.add('show');
-  setTimeout(() => document.getElementById('textInput').focus(), 100);
+  document.getElementById('textOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('textInput').focus(), 100);
 }
-
 function closeTextInput() {
-  document.getElementById('textOverlay').classList.remove('show');
-  document.getElementById('textInput').value = '';
+  document.getElementById('textOverlay').classList.remove('show');
+  document.getElementById('textInput').value = '';
 }
-
 function sendText() {
-  const inp = document.getElementById('textInput');
-  const val = inp.value.trim();
-  if (val) {
-    inp.value = '';
-    closeTextInput();
-    sendMessage(val);
-  }
+  const inp = document.getElementById('textInput');
+  const val = inp.value.trim();
+  if (val) {
+    inp.value = '';
+    closeTextInput();
+    sendMessage(val);
+  }
 }
-
 document.getElementById('textInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') sendText();
+  if (e.key === 'Enter') sendText();
 });
 
 // ════════════════════════════════════════
@@ -1527,68 +1392,49 @@ function parseForSpeech(text) {
 
 // Optimierte Sprachausgabe mit Liams Persönlichkeit (Jetzt hoch-emotional & flüssig)
 // ════════════════════════════════════════
-// PREMIUM KI-STIMME (OpenAI/ElevenLabs Streaming)
+// PREMIUM KI-STIMME (OpenAI Streaming)
 // ════════════════════════════════════════
-
-// Variable für das aktuelle Audio
-let currentElevenLabsAudio = null;
-// NEU: Ein Ticket-Zähler, um Überschneidungen zu verhindern!
-let audioRequestToken = 0; 
 
 async function speakLiam(text) {
   if (!text || !text.trim()) return;
 
-  // Neues Ticket für diesen Text ziehen
-  const myToken = ++audioRequestToken;
-
-  // 🛑 1. Alle bisherigen Stimmen SOFORT stoppen
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-  
-  if (currentElevenLabsAudio) {
-    currentElevenLabsAudio.pause();
-    currentElevenLabsAudio.currentTime = 0;
-    currentElevenLabsAudio = null;
-  }
-
   const robot = document.getElementById('robot');
+  
+  // Robi fängt an zu wackeln, um zu zeigen: "Ich bereite mich aufs Sprechen vor"
   if (robot) robot.classList.add('talking');
 
   try {
+    // 1. Wir fragen unseren eigenen Server nach dem perfekten KI-Audio
     const response = await fetch('/api/speech', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: text })
     });
 
-    if (!response.ok) throw new Error(`Server antwortet mit Fehler: ${response.status}`);
+    if (!response.ok) {
+      throw new Error(`Server antwortet mit Fehler: ${response.status}`);
+    }
 
+    // 2. Audio-Stream empfangen und sofort abspielbar machen
     const audioBlob = await response.blob();
-    
-    // 🛑 2. DER MAGISCHE CHECK:
-    // Hat der Nutzer in der Wartezeit schon eine neue Nachricht geschickt?
-    // Wenn ja (Ticketnummern passen nicht mehr), werfen wir dieses Audio weg!
-    if (myToken !== audioRequestToken) return;
-
-    // Zur Sicherheit: Katja (Browser-Stimme) nochmals den Mund verbieten
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-
     const audioUrl = URL.createObjectURL(audioBlob);
-    currentElevenLabsAudio = new Audio(audioUrl);
+    const audio = new Audio(audioUrl);
 
-    await currentElevenLabsAudio.play();
+    // 3. Audio abspielen
+    await audio.play();
 
-    currentElevenLabsAudio.onended = () => {
+    // 4. Wenn Robi fertig gesprochen hat, hört er auf zu wackeln
+    audio.onended = () => {
       if (robot) robot.classList.remove('talking');
-      URL.revokeObjectURL(audioUrl);
-      currentElevenLabsAudio = null;
+      URL.revokeObjectURL(audioUrl); // Speicherplatz im Handy wieder freigeben (Profi-Tipp!)
     };
 
   } catch (err) {
     console.error('[Premium TTS Error]', err);
-    // Nur wenn das noch die aktuellste Anfrage ist, den Fallschirm nutzen
-    if (myToken === audioRequestToken) {
-      fallbackSpeak(text);
-    }
+    
+    // FALLBACK: Wenn das Internet schlecht ist oder die API klemmt,
+    // stürzt die App nicht ab, sondern nutzt heimlich die normale Browser-Stimme!
+    fallbackSpeak(text);
   }
 }
 
@@ -1613,6 +1459,7 @@ function fallbackSpeak(text) {
   
   window.speechSynthesis.speak(utterance);
 }
+
 // Erkenne Emotion des Nutzers (erweiterte Version)
 function detectUserEmotionAdvanced(userText) {
   const lower = userText.toLowerCase();
@@ -1715,9 +1562,9 @@ async function sendMessage(userText) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         messages, 
-        mood: typeof currentMood !== 'undefined' ? currentMood : 'normal', 
-        mode: typeof currentMode !== 'undefined' ? currentMode : 'talk', 
-        age: typeof currentAge !== 'undefined' ? currentAge : '7-9', 
+        mood: currentMood, 
+        mode: currentMode, 
+        age: currentAge, 
         emotion: userEmotion,
         liamMode: true  // Aktiviere Liam-Persönlichkeit
       }),
@@ -1750,198 +1597,157 @@ async function sendMessage(userText) {
     console.log('[sendMessage] Liams Antwort:', reply);
     
     // Validiere auf genderneutrale Sprache vor Sprachausgabe
-    if (typeof validateGenderNeutralLanguage === 'function') {
-      validateGenderNeutralLanguage(reply);
-    }
+    validateGenderNeutralLanguage(reply);
     
     messages.push({ role: 'assistant', content: reply });
     setBubble(reply);
-    if (typeof lastRobiText !== 'undefined') lastRobiText = reply;
+    lastRobiText = reply;
     setHint('Drück das Mikro und sprich!');
     
-    // 🎯 HIER IST DIE MAGIE: Wir rufen deine fertige Premium-Stimme auf!
+    // LIAM: Nutze optimierte Sprachausgabe
     await speakLiam(reply);
+    awardStar();
 
-  // 🪂 HIER IST DER FALLSCHIRM FÜR FEHLER:
   } catch (err) {
-    console.error('[sendMessage] Fehler:', err);
-    const errorMsg = "Hoppla, das hat nicht geklappt!";
-    setBubble(errorMsg);
-    if (typeof fallbackSpeak === 'function') {
-      fallbackSpeak(errorMsg);
-    }
+    console.error('[sendMessage] Fehler abgefangen:', err.message);
+    const errorDisplay = 'Hoppla! ' + (err.message || 'Etwas ist schiefgelaufen.');
+    setBubble(errorDisplay);
+    setHint('Probier es nochmal!');
+    if (messages.length > 0) messages.pop();
+    setRobiEmotion('normal');
   } finally {
-    const micBtn = document.getElementById('micBtn');
-    if (micBtn) micBtn.disabled = false;
-    setHint('Tipp das Mikro und sprich!');
+    document.getElementById('micBtn').disabled = false;
   }
-} // <-- Das ist das offizielle und saubere Ende der sendMessage Funktion!
+}
+
 
 // ════════════════════════════════════════
 // KARAOKE
 // ════════════════════════════════════════
 function renderSongList() {
-  const list = document.getElementById('songList');
-  if (!list) return;
-  list.innerHTML = '';
-  if (typeof ALL_SONGS === 'undefined') return;
-  const songs = ALL_SONGS.filter(s => !currentAge || s.ages.includes(currentAge));
-  songs.forEach((song) => {
-    const btn = document.createElement('button');
-    btn.className = 'song-btn';
-    btn.innerHTML = '<span class="song-icon">' + song.icon + '</span><span>' + song.title + '</span>';
-    btn.onclick = () => playSong(song);
-    list.appendChild(btn);
-  });
+  const list = document.getElementById('songList');
+  list.innerHTML = '';
+  const songs = ALL_SONGS.filter(s => !currentAge || s.ages.includes(currentAge));
+  songs.forEach((song) => {
+    const btn = document.createElement('button');
+    btn.className = 'song-btn';
+    btn.innerHTML = '<span class="song-icon">' + song.icon + '</span><span>' + song.title + '</span>';
+    btn.onclick = () => playSong(song);
+    list.appendChild(btn);
+  });
 }
 
 function playSong(song) {
-  if (!song || typeof synth === 'undefined' || !synth) return;
-  if (typeof isKaraoke !== 'undefined') isKaraoke = true;
-  
-  const stopBtn = document.getElementById('stopSongBtn');
-  const list = document.getElementById('songList');
-  if (stopBtn) stopBtn.style.display = 'inline-flex';
-  if (list) list.style.opacity = '0.5';
-  
-  let lineIdx = 0;
-  function speakNext() {
-    if ((typeof isKaraoke !== 'undefined' && !isKaraoke) || lineIdx >= song.lyrics.length) { 
-      stopKaraoke(); 
-      return; 
-    }
-    const utter = new SpeechSynthesisUtterance(song.lyrics[lineIdx]);
-    if (typeof selectedVoice !== 'undefined' && selectedVoice) utter.voice = selectedVoice;
-    utter.lang = 'de-DE';
-    utter.rate = 0.9;
-    utter.pitch = 1.0;
-    utter.onend = () => { lineIdx++; setTimeout(speakNext, 400); };
-    utter.onerror = () => stopKaraoke();
-    synth.speak(utter);
-  }
-  synth.cancel();
-  setTimeout(speakNext, 200);
+  if (!song || !synth) return;
+  isKaraoke = true;
+  document.getElementById('stopSongBtn').style.display = 'inline-flex';
+  document.getElementById('songList').style.opacity = '0.5';
+  let lineIdx = 0;
+  function speakNext() {
+    if (!isKaraoke || lineIdx >= song.lyrics.length) { stopKaraoke(); return; }
+    const utter = new SpeechSynthesisUtterance(song.lyrics[lineIdx]);
+    if (selectedVoice) utter.voice = selectedVoice;
+    utter.lang = 'de-DE';
+    utter.rate = 0.9;
+    utter.pitch = 1.0;
+    utter.onend = () => { lineIdx++; setTimeout(speakNext, 400); };
+    utter.onerror = () => stopKaraoke();
+    synth.speak(utter);
+  }
+  synth.cancel();
+  setTimeout(speakNext, 200);
 }
 
 function stopKaraoke() {
-  if (typeof isKaraoke !== 'undefined') isKaraoke = false;
-  if (typeof synth !== 'undefined' && synth) synth.cancel();
-  const stopBtn = document.getElementById('stopSongBtn');
-  const list = document.getElementById('songList');
-  if (stopBtn) stopBtn.style.display = 'none';
-  if (list) list.style.opacity = '1';
+  isKaraoke = false;
+  if (synth) synth.cancel();
+  document.getElementById('stopSongBtn').style.display = 'none';
+  document.getElementById('songList').style.opacity = '1';
 }
 
 // ════════════════════════════════════════
 // PARENT PIN
 // ════════════════════════════════════════
 function openSettings() {
-  const panel = document.getElementById('panelPin');
-  const input = document.getElementById('pinInput');
-  if (panel) panel.classList.add('show');
-  if (input) {
-    input.value = '';
-    setTimeout(() => input.focus(), 100);
-  }
+  document.getElementById('panelPin').classList.add('show');
+  document.getElementById('pinInput').value = '';
+  setTimeout(() => document.getElementById('pinInput').focus(), 100);
 }
-
-function closePinPanel() { 
-  const panel = document.getElementById('panelPin');
-  if (panel) panel.classList.remove('show'); 
-}
-
+function closePinPanel() { document.getElementById('panelPin').classList.remove('show'); }
 function checkPin() {
-  const input = document.getElementById('pinInput');
-  if (!input) return;
-  const entered = input.value;
-  if (typeof parentPin !== 'undefined' && entered === parentPin) { 
-    closePinPanel(); 
-    openSettingsPanel(); 
-  } else { 
-    alert('❌ Falsche PIN.'); 
-    input.value = ''; 
-  }
+  const entered = document.getElementById('pinInput').value;
+  if (entered === parentPin) { closePinPanel(); openSettingsPanel(); }
+  else { alert('❌ Falsche PIN.'); document.getElementById('pinInput').value = ''; }
 }
-
-const pinInputElem = document.getElementById('pinInput');
-if (pinInputElem) {
-  pinInputElem.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') checkPin();
-  });
-}
+document.getElementById('pinInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') checkPin();
+});
 
 function openSettingsPanel() {
-  renderLockToggles();
-  const rateSlider = document.getElementById('rateSlider');
-  const pitchSlider = document.getElementById('pitchSlider');
-  
-  if (rateSlider && typeof speechRate !== 'undefined') {
-    rateSlider.value = speechRate;
-    document.getElementById('rateVal').textContent = speechRate.toFixed(2);
-  }
-  if (pitchSlider && typeof speechPitch !== 'undefined') {
-    pitchSlider.value = speechPitch;
-    document.getElementById('pitchVal').textContent = speechPitch.toFixed(2);
-  }
-  const panelSettings = document.getElementById('panelSettings');
-  if (panelSettings) panelSettings.classList.add('show');
+  renderLockToggles();
+  document.getElementById('rateSlider').value = speechRate;
+  document.getElementById('rateVal').textContent = speechRate.toFixed(2);
+  document.getElementById('pitchSlider').value = speechPitch;
+  document.getElementById('pitchVal').textContent = speechPitch.toFixed(2);
+  document.getElementById('panelSettings').classList.add('show');
 }
-
 function closeSettings() {
-  const panelSettings = document.getElementById('panelSettings');
-  if (panelSettings) panelSettings.classList.remove('show');
-  if (typeof renderLessonCards === 'function') renderLessonCards();
+  document.getElementById('panelSettings').classList.remove('show');
+  renderLessonCards();
 }
 
 function renderLockToggles() {
-  const container = document.getElementById('lockToggles');
-  if (!container) return;
-  container.innerHTML = '';
-  if (typeof MODES === 'undefined' || typeof parentLocks === 'undefined') return;
-  
-  const allModes = { ...MODES, karaoke: { icon: '🎤', title: 'Karaoke' } };
-  Object.entries(allModes).forEach(([key, m]) => {
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex; align-items:center; gap:10px; padding:5px 0;';
-    const checked = parentLocks[key] ? 'checked' : '';
-    div.innerHTML = '<input type="checkbox" id="lock-' + key + '" ' + checked + ' onchange="toggleLock(\'' + key + '\')" style="width:18px; height:18px; cursor:pointer;">' +
-                    '<label for="lock-' + key + '" style="margin:0; font-weight:normal; cursor:pointer;">' +
-                    m.icon + ' ' + m.title + ' sperren</label>';
-    container.appendChild(div);
-  });
+  const container = document.getElementById('lockToggles');
+  container.innerHTML = '';
+  const allModes = { ...MODES, karaoke: { icon: '🎤', title: 'Karaoke' } };
+  Object.entries(allModes).forEach(([key, m]) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex; align-items:center; gap:10px; padding:5px 0;';
+    const checked = parentLocks[key] ? 'checked' : '';
+    div.innerHTML = '<input type="checkbox" id="lock-' + key + '" ' + checked + ' onchange="toggleLock(\'' + key + '\')" style="width:18px; height:18px; cursor:pointer;">' +
+                    '<label for="lock-' + key + '" style="margin:0; font-weight:normal; cursor:pointer;">' +
+                    m.icon + ' ' + m.title + ' sperren</label>';
+    container.appendChild(div);
+  });
 }
 
 function toggleLock(mode) {
-  if (typeof parentLocks === 'undefined') return;
-  parentLocks[mode] = !parentLocks[mode];
-  localStorage.setItem('robi_locks', JSON.stringify(parentLocks));
+  parentLocks[mode] = !parentLocks[mode];
+  localStorage.setItem('robi_locks', JSON.stringify(parentLocks));
 }
 
 function changePin() {
-  const newPinInput = document.getElementById('newPinInput');
-  if (!newPinInput) return;
-  const newPin = newPinInput.value;
-  if (!/^\d{4,6}$/.test(newPin)) { alert('PIN muss 4-6 Ziffern haben.'); return; }
-  if (typeof parentPin !== 'undefined') parentPin = newPin;
-  localStorage.setItem('robi_pin', newPin);
-  newPinInput.value = '';
-  alert('✓ PIN wurde geändert.');
+  const newPin = document.getElementById('newPinInput').value;
+  if (!/^\d{4,6}$/.test(newPin)) { alert('PIN muss 4-6 Ziffern haben.'); return; }
+  parentPin = newPin;
+  localStorage.setItem('robi_pin', newPin);
+  document.getElementById('newPinInput').value = '';
+  alert('✓ PIN wurde geändert.');
 }
+
 
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
-
+const savedAge = localStorage.getItem('robi_age');
+if (savedAge && AGE_GROUPS[savedAge]) {
+  currentAge = savedAge;
+  speechRate = AGE_GROUPS[savedAge].rate;
+  speechPitch = AGE_GROUPS[savedAge].pitch;
+  showScreen('main');
+  // Show UI immediately — speak on first tap (browser audio policy)
+  initMain();
+}
 
 // ════════════════════════════════════════
 // PWA — Service Worker Registration
 // ════════════════════════════════════════
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('Robi SW registered'))
-      .catch(err => console.log('SW error:', err));
-  });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('Robi SW registered'))
+      .catch(err => console.log('SW error:', err));
+  });
 }
 
 // ════════════════════════════════════════
