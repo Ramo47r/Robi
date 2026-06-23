@@ -91,18 +91,21 @@ body {
   position: relative; min-height: 0;
 }
 
+/* ════════════════════════════════════════
+   AGE SELECT SCREEN - SZENE & ROBI (Unverzerrt & Zentriert)
+═══════════════════════════════════════ */
 .age-scene {
   position: relative;
-  width: min(320px, 80vw);
-  height: 100%;
-  max-height: min(380px, 52vh);
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1 / 1; /* 💡 Hält die Box perfekt quadratisch! */
   margin: 0 auto; /* Zentriert alles */
   display: flex; align-items: center; justify-content: center;
 }
 
 .age-halo {
   position: absolute;
-  top: 38%; left: 50%;
+  top: 45%; left: 50%;
   width: 100%; height: 80%;
   transform: translate(-50%, -50%);
   background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.3) 0%, transparent 60%);
@@ -113,8 +116,11 @@ body {
 }
 
 .age-platform {
-  position: absolute; bottom: 0; left: 50%;
-  transform: translateX(-50%); width: 110%;
+  position: absolute; 
+  bottom: 5%; /* Sitzt fast ganz unten */
+  left: 50%;
+  transform: translateX(-50%); /* Perfekt in der Mitte */
+  width: 90%; /* Plattform ist schön breit */
   pointer-events: none; z-index: 2;
   filter: drop-shadow(0 0 30px rgba(0, 200, 255, 0.7));
 }
@@ -127,10 +133,11 @@ body {
 
 .age-robot-wrap {
   position: absolute; 
-  top: 40%; /* Perfekt über der Plattform */
-  left: 50%; /* Perfekt in der Mitte */
-  transform: translate(-50%, -50%);
-  width: 86%; z-index: 3;
+  bottom: 25%; /* Startet weiter oben als die Plattform */
+  left: 50%; 
+  transform: translateX(-50%); /* Exakt über der Mitte der Plattform */
+  width: 65%; /* Robi ist realistisch etwas schmaler als der Boden */
+  z-index: 3;
   animation: robotFloat 3.6s ease-in-out infinite;
   filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
 }
@@ -208,9 +215,9 @@ body {
   50%       { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
 }
 @keyframes robotFloat {
-  /* HIER WAR DER FEHLER: Wir müssen translate(-50%, -50%) behalten, sonst rutscht er aus der Mitte! */
-  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
-  50%       { transform: translate(-50%, -50%) translateY(-12px); }
+  /* HIER WAR DER FEHLER: translateX(-50%) hält ihn exakt in der Mitte! */
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%       { transform: translateX(-50%) translateY(-15px); }
 }
 @keyframes robotTalk {
   0%, 100% { filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3)); }
