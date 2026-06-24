@@ -1792,45 +1792,67 @@ function parseForSpeech(text) {
 // PREMIUM KI-STIMME (OpenAI Streaming)
 // ════════════════════════════════════════
 
+// Optimierte Sprachausgabe mit Liams Persönlichkeit (ElevenLabs API)
+// ════════════════════════════════════════
+// PREMIUM KI-STIMME (ElevenLabs)
+// ════════════════════════════════════════
+
 async function speakLiam(text) {
   if (!text || !text.trim()) return;
 
+  // 🔴 HIER DEINE ELEVENLABS DATEN EINTRAGEN:
+  const API_KEY = 'DEIN_API_KEY_HIER';
+  const VOICE_ID = 'DEINE_VOICE_ID_HIER';
+
   const robot = document.getElementById('robot');
+  // Fallback für den Alters-Robi
+  const ageRobot = document.querySelector('.age-robot-wrap');
   
-  // Robi fängt an zu wackeln, um zu zeigen: "Ich bereite mich aufs Sprechen vor"
+  // Robi wackelt beim Sprechen
   if (robot) robot.classList.add('talking');
+  if (ageRobot) ageRobot.classList.add('talking');
 
   try {
-    // 1. Wir fragen unseren eigenen Server nach dem perfekten KI-Audio
-    const response = await fetch('/api/speech', {
+    // Direkte Anfrage an die offizielle ElevenLabs API
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text })
+      headers: {
+        'Accept': 'audio/mpeg',
+        'xi-api-key': API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: 'eleven_multilingual_v2', // Wichtig: Dieses Modell spricht perfekt Deutsch!
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75
+        }
+      })
     });
 
     if (!response.ok) {
-      throw new Error(`Server antwortet mit Fehler: ${response.status}`);
+      throw new Error(`ElevenLabs antwortet mit Fehler: ${response.status}`);
     }
 
-    // 2. Audio-Stream empfangen und sofort abspielbar machen
+    // Audio laden und abspielen
     const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
 
-    // 3. Audio abspielen
     await audio.play();
 
-    // 4. Wenn Robi fertig gesprochen hat, hört er auf zu wackeln
+    // Wenn Robi fertig gesprochen hat, hört er auf zu wackeln
     audio.onended = () => {
       if (robot) robot.classList.remove('talking');
-      URL.revokeObjectURL(audioUrl); // Speicherplatz im Handy wieder freigeben (Profi-Tipp!)
+      if (ageRobot) ageRobot.classList.remove('talking');
+      URL.revokeObjectURL(audioUrl); // Speicherplatz freigeben
     };
 
   } catch (err) {
     console.error('[Premium TTS Error]', err);
     
-    // FALLBACK: Wenn das Internet schlecht ist oder die API klemmt,
-    // stürzt die App nicht ab, sondern nutzt heimlich die normale Browser-Stimme!
+    // FALLBACK: Wenn das Internet weg ist oder der Key falsch ist
     fallbackSpeak(text);
   }
 }
@@ -1839,7 +1861,9 @@ async function speakLiam(text) {
 function fallbackSpeak(text) {
   if (!('speechSynthesis' in window)) {
     const robot = document.getElementById('robot');
+    const ageRobot = document.querySelector('.age-robot-wrap');
     if (robot) robot.classList.remove('talking');
+    if (ageRobot) ageRobot.classList.remove('talking');
     return;
   }
   
@@ -1851,8 +1875,16 @@ function fallbackSpeak(text) {
   utterance.rate = 1.05;
   
   const robot = document.getElementById('robot');
-  utterance.onend = () => { if (robot) robot.classList.remove('talking'); };
-  utterance.onerror = () => { if (robot) robot.classList.remove('talking'); };
+  const ageRobot = document.querySelector('.age-robot-wrap');
+  
+  utterance.onend = () => { 
+    if (robot) robot.classList.remove('talking'); 
+    if (ageRobot) ageRobot.classList.remove('talking');
+  };
+  utterance.onerror = () => { 
+    if (robot) robot.classList.remove('talking'); 
+    if (ageRobot) ageRobot.classList.remove('talking');
+  };
   
   window.speechSynthesis.speak(utterance);
 }
