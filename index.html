@@ -4,18 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Liam – Dein Freund, der dich wirklich sieht 💜</title>
-<meta name="theme-color" content="#6b4dff">
+<meta name="theme-color" content="#4facfe">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Liam">
 <meta name="description" content="Liam ist dein empathischer Freund. Tiefgründig. Genderneutral. Immer da zum Zuhören.">
 <link rel="manifest" href="/manifest.json">
-<!-- iOS icon (emoji rendered as SVG) -->
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%234ec3ff'/><text y='380' font-size='340' text-anchor='middle' x='256'>🤖</text></svg>">
-
 <style>
+/* ── NEUE MODERNE SCHRIFTART ── */
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap');
+
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
 html, body { 
@@ -24,6 +24,7 @@ html, body {
   font-family: 'Nunito', ui-rounded, 'SF Pro Rounded', sans-serif; 
 }
 
+/* Neuer, lebendiger Farbverlauf */
 body {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   margin: 0;
@@ -38,6 +39,24 @@ body {
   overflow: hidden;
   color: white;
 }
+
+/* ── Animated background clouds ── */
+#clouds { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.cloud {
+  position:absolute;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.4), transparent);
+  border-radius: 50%;
+  filter: blur(20px);
+  animation: cloudDrift linear infinite;
+}
+@keyframes cloudDrift {
+  from { transform: translateX(-150px); }
+  to   { transform: translateX(calc(100vw + 150px)); }
+}
+
+.screen { display:none; flex-direction:column; align-items:center; width:100%; height:100%; padding:0; }
+.screen.active { display:flex; }
+
 /* ════════════════════════════════════════
    AGE SELECT SCREEN
 ═══════════════════════════════════════ */
@@ -51,13 +70,14 @@ body {
 .age-top { width: 100%; flex-shrink: 0; }
 .age-greeting {
   font-size: clamp(22px, 5.5vw, 28px);
-  font-weight: bold;
+  font-weight: 900;
   color: white;
-  text-shadow: 0 3px 0 #2196f3, 0 5px 14px rgba(0,80,180,0.5);
+  text-shadow: 0 4px 15px rgba(0, 100, 200, 0.4);
 }
 .age-subtitle {
   font-size: clamp(14px, 3.6vw, 17px);
-  color: white;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
   margin-top: 8px;
   text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
@@ -109,17 +129,21 @@ body {
   animation: robotFloat 3.6s ease-in-out infinite, robotTalk 0.4s ease-in-out infinite;
 }
 
+/* ── MODERNE SPRECHBLASE (Milchglas-Effekt) ── */
 .age-bubble {
   position: absolute; top: 0; left: 50%;
   transform: translateX(-50%);
-  background: white; color: #1a3050;
-  padding: 10px 16px; border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  color: #1a3050;
+  padding: 10px 16px; 
+  border-radius: 20px;
   font-size: clamp(13px, 3.4vw, 15px);
-  font-weight: 600; z-index: 5;
+  font-weight: 800; z-index: 5;
   white-space: nowrap; max-width: 95%;
   overflow: hidden; text-overflow: ellipsis;
-  border: 3px solid #ffd84d;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  border: 2px solid rgba(255,255,255,0.8);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
   opacity: 0; transition: opacity 0.3s;
   pointer-events: none;
 }
@@ -134,42 +158,47 @@ body {
   width: 100%; max-width: 320px; margin: 0 auto;
 }
 
+/* ── MODERNE 3D-KARTEN ── */
 .age-card {
   background: linear-gradient(135deg, var(--c1), var(--c2));
-  border: 4px solid white;
   border-radius: 24px;
   padding: 8px 6px;
   cursor: pointer;
   display: flex; flex-direction: column;
   align-items: center; gap: 2px;
   transition: transform 0.2s;
-  color: white; font-weight: bold; font-family: inherit;
-  box-shadow: 0 6px 0 rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.25);
+  color: white; font-weight: 800; font-family: inherit;
+  box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 15px 20px rgba(0,0,0,0.1);
+  border: 2px solid rgba(255,255,255,0.3);
   min-height: 55px;
 }
-.age-card:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0,0,0,0.2), 0 4px 10px rgba(0,0,0,0.25); }
-.age-card .age-icon { font-size: clamp(32px, 8vw, 40px); line-height: 1; }
-.age-card .age-range { font-size: clamp(15px, 4vw, 18px); font-weight: bold; }
-.age-card .age-desc { font-size: clamp(10px, 2.5vw, 12px); font-weight: normal; opacity: 0.95; line-height: 1.1; }
+.age-card:active { 
+  transform: translateY(6px); 
+  box-shadow: 0 2px 0 rgba(0,0,0,0.15), 0 5px 10px rgba(0,0,0,0.1); 
+}
+.age-card .age-icon { font-size: clamp(32px, 8vw, 40px); line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+.age-card .age-range { font-size: clamp(15px, 4vw, 18px); font-weight: 900; letter-spacing: 0.5px; }
+.age-card .age-desc { font-size: clamp(10px, 2.5vw, 12px); font-weight: 600; opacity: 0.95; line-height: 1.1; }
 
-.age-1 { --c1: #ff9eb1; --c2: #ff5e7e; }
-.age-2 { --c1: #6bd4ff; --c2: #2d97ff; }
-.age-3 { --c1: #6cf5b9; --c2: #1ab87e; }
-.age-4 { --c1: #ffd062; --c2: #ff8a2a; }
+/* Frische Farben für die Karten */
+.age-1 { --c1: #ff7eb3; --c2: #ff477e; }
+.age-2 { --c1: #4facfe; --c2: #0082fa; }
+.age-3 { --c1: #43e97b; --c2: #18ab4e; }
+.age-4 { --c1: #fddb69; --c2: #f89d13; }
 
 @keyframes haloPulse {
   0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
   50%       { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
 }
 @keyframes robotFloat {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-12px); }
+  /* HIER IST DER FIX FÜR DAS SCHWEBEN (Rutscht nicht mehr nach links weg!) */
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50%       { transform: translate(-50%, -50%) translateY(-12px); }
 }
 @keyframes robotTalk {
   0%, 100% { filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3)); }
   50%       { filter: drop-shadow(0 12px 40px rgba(0,220,255,.85)); }
 }
-
 /* ════════════════════════════════════════
    MAIN SCREEN — Buddy.ai style
 ═══════════════════════════════════════ */
