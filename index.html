@@ -13,55 +13,31 @@
 <link rel="manifest" href="/manifest.json">
 <!-- iOS icon (emoji rendered as SVG) -->
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%234ec3ff'/><text y='380' font-size='340' text-anchor='middle' x='256'>🤖</text></svg>">
+
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap');
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html, body { height:100%; overflow:hidden; font-family:'Comic Sans MS', 'Chalkboard SE', -apple-system, BlinkMacSystemFont, sans-serif; }
+
+html, body { 
+  height:100%; 
+  overflow:hidden; 
+  font-family: 'Nunito', ui-rounded, 'SF Pro Rounded', sans-serif; 
+}
 
 body {
-  background: linear-gradient(135deg, #2b5f8f 0%, #4a8ac4 30%, #5a9fd4 60%, #7ab5e8 100%);
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Zentriert Robi perfekt von oben nach unten */
-  align-items: center;     /* Zentriert Robi perfekt von links nach rechts */
+  justify-content: center;
+  align-items: center;
   height: 100vh;
   min-height: 100vh;
   position: relative;
   overflow: hidden;
   color: white;
 }
-
-/* ── Animated background clouds ── */
-#clouds { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
-.cloud {
-  position:absolute;
-  background: radial-gradient(ellipse, rgba(255,255,255,0.6), rgba(255,255,255,0.2));
-  border-radius: 50%;
-  filter: blur(10px);
-  animation: cloudDrift linear infinite;
-}
-@keyframes cloudDrift {
-  from { transform: translateX(-150px); }
-  to   { transform: translateX(calc(100vw + 150px)); }
-}
-
-/* Twinkling stars (also visible on light bg) - DISABLED */
-/*.star {
-  position:absolute;
-  background: white;
-  border-radius:50%;
-  box-shadow: 0 0 8px rgba(255,255,255,0.8);
-  animation: twinkle linear infinite;
-}
-@keyframes twinkle {
-  0%, 100% { opacity: 0.2; transform: scale(0.8); }
-  50%       { opacity: 1; transform: scale(1.2); }
-}*/
-
-.screen { display:none; flex-direction:column; align-items:center; width:100%; height:100%; padding:0; }
-.screen.active { display:flex; }
-
 /* ════════════════════════════════════════
    AGE SELECT SCREEN
 ═══════════════════════════════════════ */
