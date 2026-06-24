@@ -13,31 +13,55 @@
 <link rel="manifest" href="/manifest.json">
 <!-- iOS icon (emoji rendered as SVG) -->
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%234ec3ff'/><text y='380' font-size='340' text-anchor='middle' x='256'>🤖</text></svg>">
-
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap');
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-
-html, body { 
-  height:100%; 
-  overflow:hidden; 
-  font-family: 'Nunito', ui-rounded, 'SF Pro Rounded', sans-serif; 
-}
+html, body { height:100%; overflow:hidden; font-family:'Comic Sans MS', 'Chalkboard SE', -apple-system, BlinkMacSystemFont, sans-serif; }
 
 body {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, #2b5f8f 0%, #4a8ac4 30%, #5a9fd4 60%, #7ab5e8 100%);
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  justify-content: center; /* Zentriert Robi perfekt von oben nach unten */
+  align-items: center;     /* Zentriert Robi perfekt von links nach rechts */
   height: 100vh;
   min-height: 100vh;
   position: relative;
   overflow: hidden;
   color: white;
 }
+
+/* ── Animated background clouds ── */
+#clouds { position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.cloud {
+  position:absolute;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.6), rgba(255,255,255,0.2));
+  border-radius: 50%;
+  filter: blur(10px);
+  animation: cloudDrift linear infinite;
+}
+@keyframes cloudDrift {
+  from { transform: translateX(-150px); }
+  to   { transform: translateX(calc(100vw + 150px)); }
+}
+
+/* Twinkling stars (also visible on light bg) - DISABLED */
+/*.star {
+  position:absolute;
+  background: white;
+  border-radius:50%;
+  box-shadow: 0 0 8px rgba(255,255,255,0.8);
+  animation: twinkle linear infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50%       { opacity: 1; transform: scale(1.2); }
+}*/
+
+.screen { display:none; flex-direction:column; align-items:center; width:100%; height:100%; padding:0; }
+.screen.active { display:flex; }
+
 /* ════════════════════════════════════════
    AGE SELECT SCREEN
 ═══════════════════════════════════════ */
@@ -169,6 +193,7 @@ body {
   0%, 100% { filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3)); }
   50%       { filter: drop-shadow(0 12px 40px rgba(0,220,255,.85)); }
 }
+
 /* ════════════════════════════════════════
    MAIN SCREEN — Buddy.ai style
 ═══════════════════════════════════════ */
@@ -1142,106 +1167,83 @@ let parentPin = localStorage.getItem('robi_pin') || '1234';
 // ════════════════════════════════════════
 // AGE SELECTION
 // ════════════════════════════════════════
-// AGE SELECTION
-// ════════════════════════════════════════
 function selectAge(age) {
   currentAge = age;
   localStorage.setItem('robi_age', age);
+  const grp = AGE_GROUPS[age];
+  speechRate = grp.rate;
+  speechPitch = grp.pitch;
 
-  if (typeof showScreen === 'function') {
+  showAgeBubble(grp.greeting);
+
+  // First, wait for speech to actually start speaking on mobile
+  // (browser audio policy requires user interaction)
+  speakOnAge(grp.greeting, () => {
+    // Only switch screens AFTER speech has started/finished
     showScreen('main');
-  }
-
-  // Begrüßungssatz an den Hauptbildschirm übergeben
-  const greetingText = AGE_GROUPS[age].greeting;
-  if (typeof initMain === 'function') {
-    initMain(greetingText);
-  }
+    initMain();
+  });
 }
 
 function goToAgeSelect() {
-  if (typeof closeMenu === 'function') closeMenu();
+  closeMenu();
+  if (synth) synth.cancel();
   showScreen('age');
 }
 
 function showAgeBubble(text) {
   const bubble = document.getElementById('ageBubble');
-  if (!bubble) return;
   bubble.textContent = text;
   bubble.classList.add('show');
   clearTimeout(showAgeBubble._t);
   showAgeBubble._t = setTimeout(() => bubble.classList.remove('show'), 4500);
 }
 
-// ════════════════════════════════════════
-// MAIN SCREEN INIT
-// ════════════════════════════════════════
-function initMain(customText = null) {
-  if (!messages) messages = [];
-  messages = [];
-  renderLessonCards();
-  if (typeof updateStarCount === 'function') updateStarCount();
-  
-  const m = MODES[currentMode];
-  if (!m) return;
-  
-  // Nimm den Begrüßungssatz (wenn vorhanden), sonst den Standard-Text
-  const welcome = customText ? customText : (m.welcome[currentAge] || m.welcome['7-9']);
-  
-  setBubble(welcome);
-  lastRobiText = welcome;
-  
-  setTimeout(() => {
-    if (typeof speakLiam === 'function') speakLiam(welcome);
-    else if (typeof speak === 'function') speak(welcome);
-  }, 200);
-}
-
-function renderLessonCards() {
-  const row = document.getElementById('lessonRow');
-  if (!row) return;
-  row.innerHTML = '';
-  Object.entries(MODES).forEach(([key, m]) => {
-    if (parentLocks[key]) return;
-    const card = document.createElement('button');
-    card.className = 'lesson-card mode-' + key;
-    if (key === currentMode) card.classList.add('active');
-    card.innerHTML = '<div class="lesson-icon">' + m.icon + '</div><div class="lesson-label">' + m.title + '</div>';
-    card.onclick = () => switchMode(key);
-    row.appendChild(card);
-  });
-
-  if (!parentLocks['karaoke']) {
-    const k = document.createElement('button');
-    k.className = 'lesson-card mode-karaoke';
-    k.innerHTML = '<div class="lesson-icon">🎤</div><div class="lesson-label">Karaoke</div>';
-    k.onclick = () => goToKaraoke();
-    row.appendChild(k);
+function speakOnAge(text, onDone) {
+  let isDone = false;
+  function finishCallback() {
+    if (isDone) return;
+    isDone = true;
+    if (onDone) onDone();
   }
-}
 
-function switchMode(mode) {
-  if (parentLocks[mode]) {
-    setBubble('🔒 Diese Funktion wurde von deinen Eltern gesperrt.');
-    return;
+  if (!synth) { 
+    setTimeout(finishCallback, 500); 
+    return; 
   }
-  closeMenu();
-  currentMode = mode;
-  messages = [];
-  const m = MODES[mode];
-  const welcome = m.welcome[currentAge] || m.welcome['7-9'];
 
-  renderLessonCards();
-  setBubble(welcome);
-  lastRobiText = welcome;
+  synth.cancel();
+  const r = document.getElementById('robot'); // Angepasst auf deine ID "robot"
+  if (r) r.classList.add('talking');
+
+  // Emojis für den Redefluss entfernen
+  const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+
+  const utter = new SpeechSynthesisUtterance(cleanText);
   
-  if (typeof speakLiam === 'function') speakLiam(welcome);
-  else if (typeof speak === 'function') speak(welcome);
+  // Premium-Stimmen-Filterung
+  const voice = availableVoices.find(v => 
+    v.lang.includes('de') && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Neural'))
+  ) || availableVoices.find(v => v.lang.includes('de'));
+  
+  if (voice) utter.voice = voice;
+  utter.lang = 'de-DE';
+  utter.rate = speechRate || 1.05;
+  utter.pitch = speechPitch || 1.15;
+  utter.volume = 1.0;
 
-  // Menü-Highlighting
-  document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-  const activeBtn = document.getElementById('m-' + mode);
-  if (activeBtn) activeBtn.classList.add('active');
+  utter.onend = () => { 
+    if (r) r.classList.remove('talking');
+    finishCallback();
+  };
+  utter.onerror = (err) => { 
+    if (r) r.classList.remove('talking');
+    finishCallback();
+  };
+  synth.speak(utter);
+
+  const estimatedMs = Math.max(2500, cleanText.length * 75);
+  setTimeout(finishCallback, estimatedMs);
 }
 
 // ════════════════════════════════════════
