@@ -1791,7 +1791,261 @@ function parseForSpeech(text) {
 // ════════════════════════════════════════
 // PREMIUM KI-STIMME (OpenAI Streaming)
 // ════════════════════════════════════════
+async function speakLiam(text) {
+  if (!text || !text.trim()) return;
 
+  // 🔴 HIER DEINE ELEVENLABS DATEN EINTRAGEN:
+  const API_KEY = 'DEIN_API_KEY_HIER';
+  const VOICE_ID = 'DEINE_VOICE_ID_HIER';
+
+  const robot = document.getElementById('robot');
+  // Fallback für den Alters-Robi
+  const ageRobot = document.querySelector('.age-robot-wrap');
+  
+  // Robi wackelt beim Sprechen
+  if (robot) robot.classList.add('talking');
+  if (ageRobot) ageRobot.classList.add('talking');
+
+  try {
+    // Direkte Anfrage an die offizielle ElevenLabs API
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'audio/mpeg',
+        'xi-api-key': API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: 'eleven_multilingual_v2', // Wichtig: Dieses Modell spricht perfekt Deutsch!
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`ElevenLabs antwortet mit Fehler: ${response.status}`);
+    }
+
+    // Audio laden und abspielen
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+
+    await audio.play();
+
+    // Wenn Robi fertig gesprochen hat, hört er auf zu wackeln
+    audio.onended = () => {
+      if (robot) robot.classList.remove('talking');
+      if (ageRobot) ageRobot.classList.remove('talking');
+      URL.revokeObjectURL(audioUrl); // Speicherplatz freigeben
+    };
+
+  } catch (err) {
+    console.error('[Premium TTS Error]', err);
+    
+    // FALLBACK: Wenn das Internet weg ist oder der Key falsch ist
+    fallbackSpeak(text);
+  }
+}
+
+// Unser Sicherheits-Netz (Die alte Browser-Stimme als Fallback)
+function fallbackSpeak(text) {
+  if (!('speechSynthesis' in window)) {
+    const robot = document.getElementById('robot');
+    const ageRobot = document.querySelector('.age-robot-wrap');
+    if (robot) robot.classList.remove('talking');
+    if (ageRobot) ageRobot.classList.remove('talking');
+    return;
+  }
+  
+  window.speechSynthesis.cancel();
+  const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  utterance.lang = 'de-DE';
+  utterance.pitch = 1.15;
+  utterance.rate = 1.05;
+  
+  const robot = document.getElementById('robot');
+  const ageRobot = document.querySelector('.age-robot-wrap');
+  
+  utterance.onend = () => { 
+    if (robot) robot.classList.remove('talking'); 
+    if (ageRobot) ageRobot.classList.remove('talking');
+  };
+  utterance.onerror = () => { 
+    if (robot) robot.classList.remove('talking'); 
+    if (ageRobot) ageRobot.classList.remove('talking');
+  };
+  
+  window.speechSynthesis.speak(utterance);
+}
+
+// Erkenne Emotion des Nutzers (erweiterte Version)
+function detectUserEmotionAdvanced(userText) {
+  const lower = userText.toLowerCase();
+  
+  const emotions = {
+    happy: ['freut', 'glücklich', 'toll', 'super', 'wunderbar', 'schön', 'lachen', 'erleichtert', 'prima', 'klasse'],
+    sad: ['traurig', 'niedergeschlagen', 'deprimiert', 'heulend', 'trauern', 'weinen', 'betrübt', 'mutlos'],
+    anxious: ['angst', 'nervös', 'besorgnis', 'angespannt', 'beängstigt', 'panik', 'stress', 'unsicher'],
+    frustrated: ['frustriert', 'wütend', 'sauer', 'entnervt', 'genervt', 'zornig', 'verständnislos'],
+    tired: ['müde', 'erschöpft', 'schläfrig', 'energielos', 'ausgelaugt', 'kaputt'],
+  };
+  
+  let maxScore = 0;
+  let detectedEmotion = 'normal';
+  
+  Object.entries(emotions).forEach(([emotion, keywords]) => {
+    const score = keywords.filter(kw => lower.includes(kw)).length;
+    if (score > maxScore) {
+      maxScore = score;
+      detectedEmotion = emotion;
+    }
+  });
+  
+  return detectedEmotion;
+}
+
+// Liam-Antworten basierend auf Emotion
+const liamEmotionalResponses = {
+  happy: {
+    greeting: 'Das freut mich zu hören. Deine Energie kommt an.',
+    follow: 'Das ist wunderbar. Erzähl mir mehr davon.'
+  },
+  sad: {
+    greeting: 'Ich sehe, dass es dir gerade nicht so gut geht.',
+    follow: 'Das ist okay. Deine Gefühle sind wichtig. Ich bin für dich da.'
+  },
+  anxious: {
+    greeting: 'Ich merke, dass dich etwas beunruhigt.',
+    follow: 'Das ist völlig normal. Lass uns das zusammen angehen.'
+  },
+  frustrated: {
+    greeting: 'Ich spüre, dass dich etwas frustriert.',
+    follow: 'Das ist berechtigt. Lass mich dir helfen, das zu sortieren.'
+  },
+  tired: {
+    greeting: 'Du klingst erschöpft. Das ist verständlich.',
+    follow: 'Dein Körper sagt dir, dass du Ruhe brauchst. Das ist wichtig.'
+  },
+  normal: {
+    greeting: 'Hallo. Ich bin Liam. Wie kann ich dir heute helfen?',
+    follow: 'Ich höre dir zu.'
+  }
+};
+
+function generateLiamGreeting(emotion) {
+  const response = liamEmotionalResponses[emotion] || liamEmotionalResponses.normal;
+  return response.greeting + ' ' + response.follow;
+}
+
+// Setzt Robis emotionalen Zustand basierend auf User-Gefühle
+function setRobiEmotion(emotion) {
+  const robot = document.getElementById('robot');
+  if (!robot) return;
+  
+  robot.classList.remove('excited', 'sad', 'tired', 'listening');
+  
+  if (emotion === 'sad') {
+    robot.classList.add('sad');
+  } else if (emotion === 'happy' || emotion === 'excited') {
+    robot.classList.add('excited');
+  } else if (emotion === 'tired') {
+    robot.classList.add('tired');
+  }
+}
+
+async function sendMessage(userText) {
+  if (!userText || !userText.trim()) return;
+  userText = userText.trim().slice(0, 500);
+
+  // *** LIAM: Erkenne die Emotion des Nutzers mit erweiterter Methode ***
+  const userEmotion = detectUserEmotionAdvanced(userText);
+  setRobiEmotion(userEmotion);
+
+  setBubble('Du: "' + userText + '"');
+  setHint('Liam denkt nach... 🤔');
+  setTimeout(setBubbleLoading, 800);
+
+  messages.push({ role: 'user', content: userText });
+  if (messages.length > MAX_HISTORY) messages = messages.slice(-MAX_HISTORY);
+
+  document.getElementById('micBtn').disabled = true;
+
+  try {
+    console.log('[sendMessage] Sende Nachricht an /api/chat:', userText);
+    console.log('[sendMessage] Erkannte Emotion:', userEmotion);
+    console.log('[sendMessage] Messages:', JSON.stringify(messages));
+    
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        messages, 
+        mood: currentMood, 
+        mode: currentMode, 
+        age: currentAge, 
+        emotion: userEmotion,
+        liamMode: true  // Aktiviere Liam-Persönlichkeit
+      }),
+    });
+    
+    console.log('[sendMessage] Response Status:', res.status);
+    console.log('[sendMessage] Response OK:', res.ok);
+    
+    const text = await res.text();
+    console.log('[sendMessage] Raw Server-Antwort:', text);
+    
+    let data;
+    try { 
+      data = JSON.parse(text); 
+      console.log('[sendMessage] Geparste Daten:', data);
+    }
+    catch (e) { 
+      console.error('[sendMessage] JSON Parse Fehler:', e.message);
+      console.error('[sendMessage] Text war:', text);
+      throw new Error('Server-Antwort ist kein gültiges JSON: ' + text.substring(0, 100)); 
+    }
+    
+    if (!res.ok) {
+      const errorMsg = data.error || data.message || 'Server-Fehler ' + res.status;
+      console.error('[sendMessage] Server-Fehler:', errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    const reply = data.reply || 'Hmm, mir fällt gerade nichts ein!';
+    console.log('[sendMessage] Liams Antwort:', reply);
+    
+    // Validiere auf genderneutrale Sprache vor Sprachausgabe
+    if (typeof validateGenderNeutralLanguage === 'function') {
+      validateGenderNeutralLanguage(reply);
+    }
+    
+    messages.push({ role: 'assistant', content: reply });
+    setBubble(reply);
+    lastRobiText = reply;
+    setHint('Drück das Mikro und sprich!');
+    
+    // LIAM: Nutze optimierte Sprachausgabe (ElevenLabs)
+    await speakLiam(reply);
+    if (typeof awardStar === 'function') {
+      awardStar();
+    }
+
+  } catch (err) {
+    console.error('[sendMessage] Fehler abgefangen:', err.message);
+    const errorDisplay = 'Hoppla! ' + (err.message || 'Etwas ist schiefgelaufen.');
+    setBubble(errorDisplay);
+    setHint('Probier es nochmal!');
+    if (messages.length > 0) messages.pop();
+    setRobiEmotion('normal');
+  } finally {
+    document.getElementById('micBtn').disabled = false;
+  }
+}
 // Optimierte Sprachausgabe mit Liams Persönlichkeit (ElevenLabs API)
 // ════════════════════════════════════════
 // PREMIUM KI-STIMME (ElevenLabs)
