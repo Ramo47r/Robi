@@ -1042,6 +1042,20 @@ let currentAge = null;
 let isKaraoke = false;
 let lastRobiText = '';
 let starCount = parseInt(localStorage.getItem('robi_stars') || '0');
+let isListening = false;
+
+// Spracheingabe (Mikrofon) Setup
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const SR = SpeechRecognition ? new SpeechRecognition() : null;
+let recognition = null;
+if (SR) {
+  recognition = SR;
+  recognition.lang = 'de-DE';
+  recognition.interimResults = false;
+  recognition.onresult = (e) => { sendMessage(e.results[0][0].transcript); };
+  recognition.onend = () => stopListening();
+  recognition.onerror = () => stopListening();
+}
 
 const AGE_GROUPS = {
   // 🎯 JETZT NATÜRLICH, JUNG & GENDERNEUTRAL — Kein piepsiger Comic-Sound mehr!
@@ -1170,270 +1184,86 @@ let parentLocks = JSON.parse(localStorage.getItem('robi_locks') || '{}');
 let parentPin = localStorage.getItem('robi_pin') || '1234';
 
 // ════════════════════════════════════════
-// AGE SELECTION
+// AGE SELECTION (Repariert für sofortigen Wechsel)
 // ════════════════════════════════════════
-// ════════════════════════════════════════
-// AGE SELECTION (Repariert & mit ElevenLabs verknüpft)
-// ════════════════════════════════════════
-async function speakLiam(text) {
-  if (!text || !text.trim()) return;
+function selectAge(age) {
+  currentAge = age;
+  localStorage.setItem('robi_age', age);
+  const grp = AGE_GROUPS[age];
+  speechRate = grp.rate;
+  speechPitch = grp.pitch;
 
-  // 🔴 HIER DEINE ELEVENLABS DATEN EINTRAGEN:
-  const API_KEY = 'DEIN_API_KEY_HIER';
-  const VOICE_ID = 'DEINE_VOICE_ID_HIER';
+  showAgeBubble(grp.greeting);
 
-  const robot = document.getElementById('robot');
-  // Fallback für den Alters-Robi
-  const ageRobot = document.querySelector('.age-robot-wrap');
-  
-  // Robi wackelt beim Sprechen
-  if (robot) robot.classList.add('talking');
-  if (ageRobot) ageRobot.classList.add('talking');
-
-  try {
-    // Direkte Anfrage an die offizielle ElevenLabs API
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'xi-api-key': API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: 'eleven_multilingual_v2', // Wichtig: Dieses Modell spricht perfekt Deutsch!
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`ElevenLabs antwortet mit Fehler: ${response.status}`);
-    }
-
-    // Audio laden und abspielen
-    const audioBlob = await response.blob();
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-
-    await audio.play();
-
-    // Wenn Robi fertig gesprochen hat, hört er auf zu wackeln
-    audio.onended = () => {
-      if (robot) robot.classList.remove('talking');
-      if (ageRobot) ageRobot.classList.remove('talking');
-      URL.revokeObjectURL(audioUrl); // Speicherplatz freigeben
-    };
-
-  } catch (err) {
-    console.error('[Premium TTS Error]', err);
-    
-    // FALLBACK: Wenn das Internet weg ist oder der Key falsch ist
-    fallbackSpeak(text);
-  }
+  // SOFORTIGER WECHSEL: Keine Verzögerung mehr durch alte Browser-Stimmen!
+  showScreen('main');
+  initMain(grp.greeting);
 }
 
-// Unser Sicherheits-Netz (Die alte Browser-Stimme als Fallback)
-function fallbackSpeak(text) {
-  if (!('speechSynthesis' in window)) {
-    const robot = document.getElementById('robot');
-    const ageRobot = document.querySelector('.age-robot-wrap');
-    if (robot) robot.classList.remove('talking');
-    if (ageRobot) ageRobot.classList.remove('talking');
-    return;
+function goToAgeSelect() {
+  closeMenu();
+  if (synth) synth.cancel();
+  showScreen('age');
+}
+
+function showAgeBubble(text) {
+  const bubble = document.getElementById('ageBubble');
+  if(!bubble) return;
+  bubble.textContent = text;
+  bubble.classList.add('show');
+  clearTimeout(showAgeBubble._t);
+  showAgeBubble._t = setTimeout(() => bubble.classList.remove('show'), 4500);
+}
+
+// Die alte speakOnAge Funktion bleibt im Code, falls HTML-Teile sie noch brauchen, wird aber beim Altersklick nicht mehr genutzt.
+function speakOnAge(text, onDone) {
+  let isDone = false;
+  function finishCallback() {
+    if (isDone) return;
+    isDone = true;
+    if (onDone) onDone();
   }
-  
-  window.speechSynthesis.cancel();
+
+  if (!synth) { 
+    setTimeout(finishCallback, 500); 
+    return; 
+  }
+
+  synth.cancel();
+  const r = document.getElementById('robot');
+  if (r) r.classList.add('talking');
+
   const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  utterance.lang = 'de-DE';
-  utterance.pitch = 1.15;
-  utterance.rate = 1.05;
+  const utter = new SpeechSynthesisUtterance(cleanText);
   
-  const robot = document.getElementById('robot');
-  const ageRobot = document.querySelector('.age-robot-wrap');
+  const voice = availableVoices.find(v => 
+    v.lang.includes('de') && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Neural'))
+  ) || availableVoices.find(v => v.lang.includes('de'));
   
-  utterance.onend = () => { 
-    if (robot) robot.classList.remove('talking'); 
-    if (ageRobot) ageRobot.classList.remove('talking');
+  if (voice) utter.voice = voice;
+  utter.lang = 'de-DE';
+  utter.rate = speechRate || 1.05;
+  utter.pitch = speechPitch || 1.15;
+  utter.volume = 1.0;
+
+  utter.onend = () => { 
+    if (r) r.classList.remove('talking');
+    finishCallback();
   };
-  utterance.onerror = () => { 
-    if (robot) robot.classList.remove('talking'); 
-    if (ageRobot) ageRobot.classList.remove('talking');
+  utter.onerror = (err) => { 
+    if (r) r.classList.remove('talking');
+    finishCallback();
   };
-  
-  window.speechSynthesis.speak(utterance);
+  synth.speak(utter);
+
+  const estimatedMs = Math.max(2500, cleanText.length * 75);
+  setTimeout(finishCallback, estimatedMs);
 }
 
-// Erkenne Emotion des Nutzers (erweiterte Version)
-function detectUserEmotionAdvanced(userText) {
-  const lower = userText.toLowerCase();
-  
-  const emotions = {
-    happy: ['freut', 'glücklich', 'toll', 'super', 'wunderbar', 'schön', 'lachen', 'erleichtert', 'prima', 'klasse'],
-    sad: ['traurig', 'niedergeschlagen', 'deprimiert', 'heulend', 'trauern', 'weinen', 'betrübt', 'mutlos'],
-    anxious: ['angst', 'nervös', 'besorgnis', 'angespannt', 'beängstigt', 'panik', 'stress', 'unsicher'],
-    frustrated: ['frustriert', 'wütend', 'sauer', 'entnervt', 'genervt', 'zornig', 'verständnislos'],
-    tired: ['müde', 'erschöpft', 'schläfrig', 'energielos', 'ausgelaugt', 'kaputt'],
-  };
-  
-  let maxScore = 0;
-  let detectedEmotion = 'normal';
-  
-  Object.entries(emotions).forEach(([emotion, keywords]) => {
-    const score = keywords.filter(kw => lower.includes(kw)).length;
-    if (score > maxScore) {
-      maxScore = score;
-      detectedEmotion = emotion;
-    }
-  });
-  
-  return detectedEmotion;
-}
-
-// Liam-Antworten basierend auf Emotion
-const liamEmotionalResponses = {
-  happy: {
-    greeting: 'Das freut mich zu hören. Deine Energie kommt an.',
-    follow: 'Das ist wunderbar. Erzähl mir mehr davon.'
-  },
-  sad: {
-    greeting: 'Ich sehe, dass es dir gerade nicht so gut geht.',
-    follow: 'Das ist okay. Deine Gefühle sind wichtig. Ich bin für dich da.'
-  },
-  anxious: {
-    greeting: 'Ich merke, dass dich etwas beunruhigt.',
-    follow: 'Das ist völlig normal. Lass uns das zusammen angehen.'
-  },
-  frustrated: {
-    greeting: 'Ich spüre, dass dich etwas frustriert.',
-    follow: 'Das ist berechtigt. Lass mich dir helfen, das zu sortieren.'
-  },
-  tired: {
-    greeting: 'Du klingst erschöpft. Das ist verständlich.',
-    follow: 'Dein Körper sagt dir, dass du Ruhe brauchst. Das ist wichtig.'
-  },
-  normal: {
-    greeting: 'Hallo. Ich bin Liam. Wie kann ich dir heute helfen?',
-    follow: 'Ich höre dir zu.'
-  }
-};
-
-function generateLiamGreeting(emotion) {
-  const response = liamEmotionalResponses[emotion] || liamEmotionalResponses.normal;
-  return response.greeting + ' ' + response.follow;
-}
-
-// Setzt Robis emotionalen Zustand basierend auf User-Gefühle
-function setRobiEmotion(emotion) {
-  const robot = document.getElementById('robot');
-  if (!robot) return;
-  
-  robot.classList.remove('excited', 'sad', 'tired', 'listening');
-  
-  if (emotion === 'sad') {
-    robot.classList.add('sad');
-  } else if (emotion === 'happy' || emotion === 'excited') {
-    robot.classList.add('excited');
-  } else if (emotion === 'tired') {
-    robot.classList.add('tired');
-  }
-}
-
-async function sendMessage(userText) {
-  if (!userText || !userText.trim()) return;
-  userText = userText.trim().slice(0, 500);
-
-  // *** LIAM: Erkenne die Emotion des Nutzers mit erweiterter Methode ***
-  const userEmotion = detectUserEmotionAdvanced(userText);
-  setRobiEmotion(userEmotion);
-
-  setBubble('Du: "' + userText + '"');
-  setHint('Liam denkt nach... 🤔');
-  setTimeout(setBubbleLoading, 800);
-
-  messages.push({ role: 'user', content: userText });
-  if (messages.length > MAX_HISTORY) messages = messages.slice(-MAX_HISTORY);
-
-  document.getElementById('micBtn').disabled = true;
-
-  try {
-    console.log('[sendMessage] Sende Nachricht an /api/chat:', userText);
-    console.log('[sendMessage] Erkannte Emotion:', userEmotion);
-    console.log('[sendMessage] Messages:', JSON.stringify(messages));
-    
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        messages, 
-        mood: currentMood, 
-        mode: currentMode, 
-        age: currentAge, 
-        emotion: userEmotion,
-        liamMode: true  // Aktiviere Liam-Persönlichkeit
-      }),
-    });
-    
-    console.log('[sendMessage] Response Status:', res.status);
-    console.log('[sendMessage] Response OK:', res.ok);
-    
-    const text = await res.text();
-    console.log('[sendMessage] Raw Server-Antwort:', text);
-    
-    let data;
-    try { 
-      data = JSON.parse(text); 
-      console.log('[sendMessage] Geparste Daten:', data);
-    }
-    catch (e) { 
-      console.error('[sendMessage] JSON Parse Fehler:', e.message);
-      console.error('[sendMessage] Text war:', text);
-      throw new Error('Server-Antwort ist kein gültiges JSON: ' + text.substring(0, 100)); 
-    }
-    
-    if (!res.ok) {
-      const errorMsg = data.error || data.message || 'Server-Fehler ' + res.status;
-      console.error('[sendMessage] Server-Fehler:', errorMsg);
-      throw new Error(errorMsg);
-    }
-
-    const reply = data.reply || 'Hmm, mir fällt gerade nichts ein!';
-    console.log('[sendMessage] Liams Antwort:', reply);
-    
-    // Validiere auf genderneutrale Sprache vor Sprachausgabe
-    if (typeof validateGenderNeutralLanguage === 'function') {
-      validateGenderNeutralLanguage(reply);
-    }
-    
-    messages.push({ role: 'assistant', content: reply });
-    setBubble(reply);
-    lastRobiText = reply;
-    setHint('Drück das Mikro und sprich!');
-    
-    // LIAM: Nutze optimierte Sprachausgabe (ElevenLabs)
-    await speakLiam(reply);
-    if (typeof awardStar === 'function') {
-      awardStar();
-    }
-
-  } catch (err) {
-    console.error('[sendMessage] Fehler abgefangen:', err.message);
-    const errorDisplay = 'Hoppla! ' + (err.message || 'Etwas ist schiefgelaufen.');
-    setBubble(errorDisplay);
-    setHint('Probier es nochmal!');
-    if (messages.length > 0) messages.pop();
-    setRobiEmotion('normal');
-  } finally {
-    document.getElementById('micBtn').disabled = false;
-  }
-}
 // ════════════════════════════════════════
 // MAIN SCREEN INIT
 // ════════════════════════════════════════
-function initMain() {
+function initMain(customText = null) {
   if (!messages) messages = [];
   messages = [];
   renderLessonCards();
@@ -1443,11 +1273,14 @@ function initMain() {
     console.warn('[initMain] Mode nicht gefunden:', currentMode);
     return;
   }
-  const welcome = m.welcome[currentAge] || m.welcome['7-9'];
+  
+  // CustomText (Altersbegrüßung) oder Standard-Willkommen laden
+  const welcome = customText ? customText : (m.welcome[currentAge] || m.welcome['7-9']);
   setBubble(welcome);
   lastRobiText = welcome;
-  // Tiny delay so screen transition completes before speech starts
-  setTimeout(() => speak(welcome), 200);
+  
+  // Nutzt jetzt unsere neue ElevenLabs Methode!
+  setTimeout(() => speakLiam(welcome), 200);
 }
 
 function renderLessonCards() {
@@ -1467,7 +1300,6 @@ function renderLessonCards() {
     row.appendChild(card);
   });
 
-  // Add karaoke as a special lesson card
   if (!parentLocks['karaoke']) {
     const k = document.createElement('button');
     k.className = 'lesson-card mode-karaoke';
@@ -1491,9 +1323,8 @@ function switchMode(mode) {
   renderLessonCards();
   setBubble(welcome);
   lastRobiText = welcome;
-  speak(welcome);
+  speakLiam(welcome); // Nutzt jetzt ElevenLabs
 
-  // Highlight active in menu
   document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
   const activeBtn = document.getElementById('m-' + mode);
   if (activeBtn) activeBtn.classList.add('active');
@@ -1614,7 +1445,7 @@ function awardStar() {
 }
 
 function repeatLast() {
-  if (lastRobiText) speak(lastRobiText);
+  if (lastRobiText) speakLiam(lastRobiText);
 }
 
 // ════════════════════════════════════════
@@ -1645,13 +1476,12 @@ function reactToMood(mood) {
     excited: 'Wow, du bist aufgeregt! Erzähl mir, was los ist!',
   };
   const text = reactions[mood];
-  if (text) { setBubble(text); lastRobiText = text; speak(text); }
+  if (text) { setBubble(text); lastRobiText = text; speakLiam(text); }
 
-  // Set robot body animation based on mood
-  const robot = document.getElementById('robot');
-  if (!robot) return;
-  robot.classList.remove('excited','sad','tired','listening');
-  if (mood === 'excited' || mood === 'happy') {
+  const robot = document.getElementById('robot');
+  if (!robot) return;
+  robot.classList.remove('excited','sad','tired','listening');
+  if (mood === 'excited' || mood === 'happy') {
     robot.classList.add('excited');
     setRobiEmotion('excited');
   }
@@ -1666,23 +1496,20 @@ function reactToMood(mood) {
 }
 
 // ════════════════════════════════════════
-// VOICE / TTS
-// ════════════════════════════════════════
-// SPEECH SYNTHESIS OPTIMIZATION FÜR BUDDY.AI-STYLE
-// Flüssig, lebendig, herzlich für Kinder 💙
+// VOICE / TTS (Veraltete Browser-Auswahl bleibt sicherheitshalber)
 // ════════════════════════════════════════
 const synth = window.speechSynthesis;
 let voices = [];
 let selectedVoice = null;
-// 🎯 KOMPLETT MENSCHLICH: Natürliches, klares Sprechen
-let speechRate = 0.95;    // ← Natürliches Sprechtempo (wie echter Mensch)
-let speechPitch = 1.0;    // ← Neutrale Tonhöhe = kein Roboter-Sound!
+let speechRate = 0.95;    
+let speechPitch = 1.0;    
 
 function loadVoices() {
   if (!synth) return;
   const allVoices = synth.getVoices();
   voices = allVoices.filter(v => v.lang.toLowerCase().startsWith('de'));
   const sel = document.getElementById('voiceSel');
+  if(!sel) return; // Falls es im HTML fehlt
   sel.innerHTML = '';
   if (voices.length === 0) {
     const opt = document.createElement('option');
@@ -1693,31 +1520,10 @@ function loadVoices() {
   }
   sel.disabled = false;
   
-  // Priorisierung je nach Device
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  // 🎯 STIMMEN-PRIORITÄT:
-  // Microsoft Katja (Windows) = sehr natürlich
-  // Google Deutsch (Android)  = klar & sauber
-  // Anna (macOS/iOS)          = natürlich auf Apple
   const preferredNames = isMobile
-    ? [
-        'Google Deutsch',        // 🥇 Android — beste Klarheit
-        'Microsoft Katja',       // Windows Mobile
-        'Anna',                  // Apple iOS
-        'Hanna', 'Microsoft Hanna',
-        'Microsoft Clara',
-        'Microsoft Zira',
-        'Hedda',
-      ]
-    : [
-        'Microsoft Katja',       // 🥇 Windows Desktop — sehr natürlich!
-        'Anna',                  // 🥈 macOS — klar & warm
-        'Google Deutsch',        // 🥉 Chrome
-        'Microsoft Clara',
-        'Hanna', 'Microsoft Hanna',
-        'Microsoft Zira',
-        'Hedda',
-      ];
+    ? ['Google Deutsch', 'Microsoft Katja', 'Anna', 'Hanna', 'Microsoft Hanna', 'Microsoft Clara', 'Microsoft Zira', 'Hedda']
+    : ['Microsoft Katja', 'Anna', 'Google Deutsch', 'Microsoft Clara', 'Hanna', 'Microsoft Hanna', 'Microsoft Zira', 'Hedda'];
   
   let bestIdx = 0;
   voices.forEach((v, i) => {
@@ -1732,7 +1538,6 @@ function loadVoices() {
   if (!isNaN(savedIdx) && voices[savedIdx]) bestIdx = savedIdx;
   sel.selectedIndex = bestIdx;
   selectedVoice = voices[bestIdx];
-  console.log('[loadVoices] Stimme:', selectedVoice?.name);
 }
 
 if (synth) {
@@ -1750,110 +1555,37 @@ if (synth) {
 }
 
 function onVoiceChange() {
-  const idx = parseInt(document.getElementById('voiceSel').value);
-  if (!isNaN(idx) && voices[idx]) { selectedVoice = voices[idx]; localStorage.setItem('robi_voice_idx', idx); }
+  const sel = document.getElementById('voiceSel');
+  if(!sel) return;
+  const idx = parseInt(sel.value);
+  if (!isNaN(idx) && voices[idx]) { selectedVoice = voices[idx]; localStorage.setItem('robi_voice_idx', idx); }
 }
 function onRateChange() {
-  speechRate = parseFloat(document.getElementById('rateSlider').value);
-  document.getElementById('rateVal').textContent = speechRate.toFixed(2);
+  const slider = document.getElementById('rateSlider');
+  if(!slider) return;
+  speechRate = parseFloat(slider.value);
+  document.getElementById('rateVal').textContent = speechRate.toFixed(2);
 }
 function onPitchChange() {
-  speechPitch = parseFloat(document.getElementById('pitchSlider').value);
-  document.getElementById('pitchVal').textContent = speechPitch.toFixed(2);
+  const slider = document.getElementById('pitchSlider');
+  if(!slider) return;
+  speechPitch = parseFloat(slider.value);
+  document.getElementById('pitchVal').textContent = speechPitch.toFixed(2);
 }
-function testVoice() { speak('Hallo! Ich bin Robi, dein Roboter-Freund!'); }
-
-
-// ════════════════════════════════════════════════════════════════
-// SPEECH SYNTHESIS — Fließend, menschlich, wie eine Pädagogin 💙
-// Kein Chunking → kein Stottern. Ein einziger Utterance pro Text.
-// Chrome-Freeze-Fix via keepAlive-Heartbeat.
-// ════════════════════════════════════════════════════════════════
-
-// Chrome/Android Bug: speechSynthesis friert nach ~15s ein → Heartbeat dagegen
-// ════════════════════════════════════════
-// TEXT-TO-SPEECH: Kindlich, Flüssig & Menschlich
-// ════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════════════════
-// ROBI'S STIMME: ALLOY (OpenAI TTS Style - Clean, Natural, Fluid)
-// ═══════════════════════════════════════════════════════════════════════════
-
-// ════════════════════════════════════════
-// ROBIS STIMME (Klar, jung, genderneutral)
-// ════════════════════════════════════════
-
-// ════════════════════════════════════════
-// ROBIS STIMME (Hoch-Emotional, Bester Freund, Genderneutral)
-// ════════════════════════════════════════
+function testVoice() { speakLiam('Hallo! Ich bin Robi, dein Roboter-Freund!'); }
 
 let availableVoices = [];
-window.speechSynthesis.onvoiceschanged = () => {
-  availableVoices = window.speechSynthesis.getVoices();
-};
-
-function speak(text) {
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel(); 
-    
-    // 1. Text bereinigen (Emojis stören den flüssigen Redefluss)
-    const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
-    if (!cleanText) return;
-    
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'de-DE';
-    
-    // 2. DER EMOTIONS-SCANNER: Wie fühlt sich der Text an?
-    const lowerText = cleanText.toLowerCase();
-    
-    // Standard-Modus (Unser genderneutraler, junger Freund)
-    let dynPitch = 1.15; 
-    let dynRate = 1.05;  
-
-    // Modus: Begeistert & Glücklich (Jubel-Worte oder Ausrufezeichen)
-    if (cleanText.includes('!') || /super|toll|klasse|yay|juhu|freu|wunderbar|cool|mega/.test(lowerText)) {
-      dynPitch = 1.35; // Deutlich höhere Stimme = aufgeregt!
-      dynRate = 1.15;  // Schneller sprechen = enthusiastisch!
-    } 
-    // Modus: Neugierig & Fragend
-    else if (cleanText.includes('?')) {
-      dynPitch = 1.25; // Stimme geht leicht hoch (wie bei einer echten Frage)
-      dynRate = 1.0;   // Etwas langsamer, um aufmerksam zuzuhören
-    }
-    // Modus: Tröstend & Sanft
-    else if (/schade|oh|traurig|müde|weinen|tut mir leid|keine sorge|alles gut/.test(lowerText)) {
-      dynPitch = 0.95; // Etwas tiefere, weichere Stimme
-      dynRate = 0.90;  // Ganz langsam und beruhigend sprechen
-    }
-
-    // Werte anwenden
-    utterance.pitch = dynPitch;
-    utterance.rate = dynRate;
-    
-    // 3. Beste verfügbare Stimme im Gerät suchen
-    const preferredVoice = availableVoices.find(v => 
-      v.lang.includes('de') && (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Neural'))
-    ) || availableVoices.find(v => v.lang.includes('de'));
-    
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-    }
-    
-    // 4. Robi beim Sprechen animieren
-    utterance.onstart = () => {
-      const robotEl = document.getElementById('robot');
-      if(robotEl) robotEl.classList.add('talking');
-    };
-    
-    utterance.onend = () => {
-      const robotEl = document.getElementById('robot');
-      if(robotEl) robotEl.classList.remove('talking');
-    };
-
-    window.speechSynthesis.speak(utterance);
-  } else {
-    console.warn("Speech Synthesis wird von diesem Browser nicht unterstützt.");
-  }
+if(window.speechSynthesis) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    availableVoices = window.speechSynthesis.getVoices();
+  };
 }
+
+// Die alte Browser-Speak Funktion bleibt erhalten
+function speak(text) {
+  fallbackSpeak(text);
+}
+
 function toggleListen() {
   try {
     if (!SR) {
@@ -1876,54 +1608,51 @@ function toggleListen() {
 }
 
 function startListening() {
-  isListening = true;
-  document.getElementById('micBtn').classList.add('listening');
-  setHint('Ich höre dich... 👂');
-  const robot = document.getElementById('robot');
-  if (robot) { robot.classList.remove('excited','sad','tired'); robot.classList.add('listening'); }
+  isListening = true;
+  document.getElementById('micBtn').classList.add('listening');
+  setHint('Ich höre dich... 👂');
+  const robot = document.getElementById('robot');
+  if (robot) { robot.classList.remove('excited','sad','tired'); robot.classList.add('listening'); }
 }
 function stopListening() {
-  isListening = false;
-  document.getElementById('micBtn').classList.remove('listening');
-  setHint('Drück das Mikro und sprich!');
-  const robot = document.getElementById('robot');
-  if (robot) robot.classList.remove('listening');
+  isListening = false;
+  document.getElementById('micBtn').classList.remove('listening');
+  setHint('Drück das Mikro und sprich!');
+  const robot = document.getElementById('robot');
+  if (robot) robot.classList.remove('listening');
 }
 
 // ════════════════════════════════════════
 // SEND MESSAGE
 // ════════════════════════════════════════
 function openTextInput() {
-  document.getElementById('textOverlay').classList.add('show');
-  setTimeout(() => document.getElementById('textInput').focus(), 100);
+  document.getElementById('textOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('textInput').focus(), 100);
 }
 function closeTextInput() {
-  document.getElementById('textOverlay').classList.remove('show');
-  document.getElementById('textInput').value = '';
+  document.getElementById('textOverlay').classList.remove('show');
+  document.getElementById('textInput').value = '';
 }
 function sendText() {
-  const inp = document.getElementById('textInput');
-  const val = inp.value.trim();
-  if (val) {
-    inp.value = '';
-    closeTextInput();
-    sendMessage(val);
-  }
+  const inp = document.getElementById('textInput');
+  const val = inp.value.trim();
+  if (val) {
+    inp.value = '';
+    closeTextInput();
+    sendMessage(val);
+  }
 }
-document.getElementById('textInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') sendText();
-});
-
-// ════════════════════════════════════════
-// EMOTION DETECTION — Erkennt User-Gefühle
-// ════════════════════════════════════════
-// Veraltet: Nutze detectUserEmotionAdvanced stattdessen (siehe LIAM INTEGRATION)
+const textInputEl = document.getElementById('textInput');
+if(textInputEl) {
+  textInputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendText();
+  });
+}
 
 // ════════════════════════════════════════
 // LIAM INTEGRATION - TTS & VOICE OPTIMIZATION
 // ════════════════════════════════════════
 
-// Validiere Text auf genderneutrale Sprache (für TTS-Optimierung)
 function validateGenderNeutralLanguage(text) {
   const genderMarkers = {
     '/in': 'Nutze stattdessen: Lehrpersonen',
@@ -1942,7 +1671,6 @@ function validateGenderNeutralLanguage(text) {
   return !hasIssues;
 }
 
-// Parse Text für natürliche Sprechweise (kurze Sätze, Pausen)
 function parseForSpeech(text) {
   text = text.replace(/<[^>]*>/g, '').trim();
   const sentences = text.match(/[^.!?]*[.!?]+/g) || [text];
@@ -1966,646 +1694,372 @@ function parseForSpeech(text) {
   return chunks;
 }
 
-// Optimierte Sprachausgabe mit Liams Persönlichkeit (Jetzt hoch-emotional & flüssig)
 // ════════════════════════════════════════
-// PREMIUM KI-STIMME (OpenAI Streaming)
+// ELEVENLABS - PREMIUM KI-STIMME
 // ════════════════════════════════════════
 async function speakLiam(text) {
-  if (!text || !text.trim()) return;
+  if (!text || !text.trim()) return;
 
-  // 🔴 HIER DEINE ELEVENLABS DATEN EINTRAGEN:
-  const API_KEY = 'DEIN_API_KEY_HIER';
-  const VOICE_ID = 'DEINE_VOICE_ID_HIER';
+  // 🔴 HIER DEINE ELEVENLABS DATEN EINTRAGEN:
+  const API_KEY = 'DEIN_API_KEY_HIER';
+  const VOICE_ID = 'DEINE_VOICE_ID_HIER';
 
-  const robot = document.getElementById('robot');
-  // Fallback für den Alters-Robi
-  const ageRobot = document.querySelector('.age-robot-wrap');
-  
-  // Robi wackelt beim Sprechen
-  if (robot) robot.classList.add('talking');
-  if (ageRobot) ageRobot.classList.add('talking');
+  const robot = document.getElementById('robot');
+  const ageRobot = document.querySelector('.age-robot-wrap');
+  
+  if (robot) robot.classList.add('talking');
+  if (ageRobot) ageRobot.classList.add('talking');
 
-  try {
-    // Direkte Anfrage an die offizielle ElevenLabs API
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'xi-api-key': API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: 'eleven_multilingual_v2', // Wichtig: Dieses Modell spricht perfekt Deutsch!
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75
-        }
-      })
-    });
+  try {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'audio/mpeg',
+        'xi-api-key': API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75
+        }
+      })
+    });
 
-    if (!response.ok) {
-      throw new Error(`ElevenLabs antwortet mit Fehler: ${response.status}`);
-    }
+    if (!response.ok) {
+      throw new Error(`Server antwortet mit Fehler: ${response.status}`);
+    }
 
-    // Audio laden und abspielen
-    const audioBlob = await response.blob();
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
 
-    await audio.play();
+    await audio.play();
 
-    // Wenn Robi fertig gesprochen hat, hört er auf zu wackeln
-    audio.onended = () => {
-      if (robot) robot.classList.remove('talking');
-      if (ageRobot) ageRobot.classList.remove('talking');
-      URL.revokeObjectURL(audioUrl); // Speicherplatz freigeben
-    };
+    audio.onended = () => {
+      if (robot) robot.classList.remove('talking');
+      if (ageRobot) ageRobot.classList.remove('talking');
+      URL.revokeObjectURL(audioUrl);
+    };
 
-  } catch (err) {
-    console.error('[Premium TTS Error]', err);
-    
-    // FALLBACK: Wenn das Internet weg ist oder der Key falsch ist
-    fallbackSpeak(text);
-  }
+  } catch (err) {
+    console.error('[Premium TTS Error]', err);
+    fallbackSpeak(text);
+  }
 }
 
-// Unser Sicherheits-Netz (Die alte Browser-Stimme als Fallback)
 function fallbackSpeak(text) {
-  if (!('speechSynthesis' in window)) {
-    const robot = document.getElementById('robot');
-    const ageRobot = document.querySelector('.age-robot-wrap');
-    if (robot) robot.classList.remove('talking');
-    if (ageRobot) ageRobot.classList.remove('talking');
-    return;
-  }
-  
-  window.speechSynthesis.cancel();
-  const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  utterance.lang = 'de-DE';
-  utterance.pitch = 1.15;
-  utterance.rate = 1.05;
-  
-  const robot = document.getElementById('robot');
-  const ageRobot = document.querySelector('.age-robot-wrap');
-  
-  utterance.onend = () => { 
-    if (robot) robot.classList.remove('talking'); 
-    if (ageRobot) ageRobot.classList.remove('talking');
-  };
-  utterance.onerror = () => { 
-    if (robot) robot.classList.remove('talking'); 
-    if (ageRobot) ageRobot.classList.remove('talking');
-  };
-  
-  window.speechSynthesis.speak(utterance);
+  if (!('speechSynthesis' in window)) {
+    const robot = document.getElementById('robot');
+    const ageRobot = document.querySelector('.age-robot-wrap');
+    if (robot) robot.classList.remove('talking');
+    if (ageRobot) ageRobot.classList.remove('talking');
+    return;
+  }
+  
+  window.speechSynthesis.cancel();
+  const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  utterance.lang = 'de-DE';
+  utterance.pitch = 1.15;
+  utterance.rate = 1.05;
+  
+  const robot = document.getElementById('robot');
+  const ageRobot = document.querySelector('.age-robot-wrap');
+  
+  utterance.onend = () => { 
+    if (robot) robot.classList.remove('talking'); 
+    if (ageRobot) ageRobot.classList.remove('talking');
+  };
+  utterance.onerror = () => { 
+    if (robot) robot.classList.remove('talking'); 
+    if (ageRobot) ageRobot.classList.remove('talking');
+  };
+  
+  window.speechSynthesis.speak(utterance);
 }
 
-// Erkenne Emotion des Nutzers (erweiterte Version)
 function detectUserEmotionAdvanced(userText) {
-  const lower = userText.toLowerCase();
-  
-  const emotions = {
-    happy: ['freut', 'glücklich', 'toll', 'super', 'wunderbar', 'schön', 'lachen', 'erleichtert', 'prima', 'klasse'],
-    sad: ['traurig', 'niedergeschlagen', 'deprimiert', 'heulend', 'trauern', 'weinen', 'betrübt', 'mutlos'],
-    anxious: ['angst', 'nervös', 'besorgnis', 'angespannt', 'beängstigt', 'panik', 'stress', 'unsicher'],
-    frustrated: ['frustriert', 'wütend', 'sauer', 'entnervt', 'genervt', 'zornig', 'verständnislos'],
-    tired: ['müde', 'erschöpft', 'schläfrig', 'energielos', 'ausgelaugt', 'kaputt'],
-  };
-  
-  let maxScore = 0;
-  let detectedEmotion = 'normal';
-  
-  Object.entries(emotions).forEach(([emotion, keywords]) => {
-    const score = keywords.filter(kw => lower.includes(kw)).length;
-    if (score > maxScore) {
-      maxScore = score;
-      detectedEmotion = emotion;
-    }
-  });
-  
-  return detectedEmotion;
+  const lower = userText.toLowerCase();
+  
+  const emotions = {
+    happy: ['freut', 'glücklich', 'toll', 'super', 'wunderbar', 'schön', 'lachen', 'erleichtert', 'prima', 'klasse'],
+    sad: ['traurig', 'niedergeschlagen', 'deprimiert', 'heulend', 'trauern', 'weinen', 'betrübt', 'mutlos'],
+    anxious: ['angst', 'nervös', 'besorgnis', 'angespannt', 'beängstigt', 'panik', 'stress', 'unsicher'],
+    frustrated: ['frustriert', 'wütend', 'sauer', 'entnervt', 'genervt', 'zornig', 'verständnislos'],
+    tired: ['müde', 'erschöpft', 'schläfrig', 'energielos', 'ausgelaugt', 'kaputt'],
+  };
+  
+  let maxScore = 0;
+  let detectedEmotion = 'normal';
+  
+  Object.entries(emotions).forEach(([emotion, keywords]) => {
+    const score = keywords.filter(kw => lower.includes(kw)).length;
+    if (score > maxScore) {
+      maxScore = score;
+      detectedEmotion = emotion;
+    }
+  });
+  
+  return detectedEmotion;
 }
 
-// Liam-Antworten basierend auf Emotion
 const liamEmotionalResponses = {
-  happy: {
-    greeting: 'Das freut mich zu hören. Deine Energie kommt an.',
-    follow: 'Das ist wunderbar. Erzähl mir mehr davon.'
-  },
-  sad: {
-    greeting: 'Ich sehe, dass es dir gerade nicht so gut geht.',
-    follow: 'Das ist okay. Deine Gefühle sind wichtig. Ich bin für dich da.'
-  },
-  anxious: {
-    greeting: 'Ich merke, dass dich etwas beunruhigt.',
-    follow: 'Das ist völlig normal. Lass uns das zusammen angehen.'
-  },
-  frustrated: {
-    greeting: 'Ich spüre, dass dich etwas frustriert.',
-    follow: 'Das ist berechtigt. Lass mich dir helfen, das zu sortieren.'
-  },
-  tired: {
-    greeting: 'Du klingst erschöpft. Das ist verständlich.',
-    follow: 'Dein Körper sagt dir, dass du Ruhe brauchst. Das ist wichtig.'
-  },
-  normal: {
-    greeting: 'Hallo. Ich bin Liam. Wie kann ich dir heute helfen?',
-    follow: 'Ich höre dir zu.'
-  }
+  happy: { greeting: 'Das freut mich zu hören. Deine Energie kommt an.', follow: 'Das ist wunderbar. Erzähl mir mehr davon.' },
+  sad: { greeting: 'Ich sehe, dass es dir gerade nicht so gut geht.', follow: 'Das ist okay. Deine Gefühle sind wichtig. Ich bin für dich da.' },
+  anxious: { greeting: 'Ich merke, dass dich etwas beunruhigt.', follow: 'Das ist völlig normal. Lass uns das zusammen angehen.' },
+  frustrated: { greeting: 'Ich spüre, dass dich etwas frustriert.', follow: 'Das ist berechtigt. Lass mich dir helfen, das zu sortieren.' },
+  tired: { greeting: 'Du klingst erschöpft. Das ist verständlich.', follow: 'Dein Körper sagt dir, dass du Ruhe brauchst. Das ist wichtig.' },
+  normal: { greeting: 'Hallo. Ich bin Liam. Wie kann ich dir heute helfen?', follow: 'Ich höre dir zu.' }
 };
 
 function generateLiamGreeting(emotion) {
-  const response = liamEmotionalResponses[emotion] || liamEmotionalResponses.normal;
-  return response.greeting + ' ' + response.follow;
+  const response = liamEmotionalResponses[emotion] || liamEmotionalResponses.normal;
+  return response.greeting + ' ' + response.follow;
 }
 
-// Setzt Robis emotionalen Zustand basierend auf User-Gefühle
 function setRobiEmotion(emotion) {
-  const robot = document.getElementById('robot');
-  if (!robot) return;
-  
-  robot.classList.remove('excited', 'sad', 'tired', 'listening');
-  
-  if (emotion === 'sad') {
-    robot.classList.add('sad');
-  } else if (emotion === 'happy' || emotion === 'excited') {
-    robot.classList.add('excited');
-  } else if (emotion === 'tired') {
-    robot.classList.add('tired');
-  }
+  const robot = document.getElementById('robot');
+  if (!robot) return;
+  
+  robot.classList.remove('excited', 'sad', 'tired', 'listening');
+  
+  if (emotion === 'sad') {
+    robot.classList.add('sad');
+  } else if (emotion === 'happy' || emotion === 'excited') {
+    robot.classList.add('excited');
+  } else if (emotion === 'tired') {
+    robot.classList.add('tired');
+  }
 }
 
 async function sendMessage(userText) {
-  if (!userText || !userText.trim()) return;
-  userText = userText.trim().slice(0, 500);
+  if (!userText || !userText.trim()) return;
+  userText = userText.trim().slice(0, 500);
 
-  // *** LIAM: Erkenne die Emotion des Nutzers mit erweiterter Methode ***
-  const userEmotion = detectUserEmotionAdvanced(userText);
-  setRobiEmotion(userEmotion);
+  const userEmotion = detectUserEmotionAdvanced(userText);
+  setRobiEmotion(userEmotion);
 
-  setBubble('Du: "' + userText + '"');
-  setHint('Liam denkt nach... 🤔');
-  setTimeout(setBubbleLoading, 800);
+  setBubble('Du: "' + userText + '"');
+  setHint('Liam denkt nach... 🤔');
+  setTimeout(setBubbleLoading, 800);
 
-  messages.push({ role: 'user', content: userText });
-  if (messages.length > MAX_HISTORY) messages = messages.slice(-MAX_HISTORY);
+  messages.push({ role: 'user', content: userText });
+  if (messages.length > MAX_HISTORY) messages = messages.slice(-MAX_HISTORY);
 
-  document.getElementById('micBtn').disabled = true;
+  const micBtn = document.getElementById('micBtn');
+  if(micBtn) micBtn.disabled = true;
 
-  try {
-    console.log('[sendMessage] Sende Nachricht an /api/chat:', userText);
-    console.log('[sendMessage] Erkannte Emotion:', userEmotion);
-    console.log('[sendMessage] Messages:', JSON.stringify(messages));
-    
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        messages, 
-        mood: currentMood, 
-        mode: currentMode, 
-        age: currentAge, 
-        emotion: userEmotion,
-        liamMode: true  // Aktiviere Liam-Persönlichkeit
-      }),
-    });
-    
-    console.log('[sendMessage] Response Status:', res.status);
-    console.log('[sendMessage] Response OK:', res.ok);
-    
-    const text = await res.text();
-    console.log('[sendMessage] Raw Server-Antwort:', text);
-    
-    let data;
-    try { 
-      data = JSON.parse(text); 
-      console.log('[sendMessage] Geparste Daten:', data);
-    }
-    catch (e) { 
-      console.error('[sendMessage] JSON Parse Fehler:', e.message);
-      console.error('[sendMessage] Text war:', text);
-      throw new Error('Server-Antwort ist kein gültiges JSON: ' + text.substring(0, 100)); 
-    }
-    
-    if (!res.ok) {
-      const errorMsg = data.error || data.message || 'Server-Fehler ' + res.status;
-      console.error('[sendMessage] Server-Fehler:', errorMsg);
-      throw new Error(errorMsg);
-    }
+  try {
+    console.log('[sendMessage] Sende Nachricht an /api/chat:', userText);
+    console.log('[sendMessage] Erkannte Emotion:', userEmotion);
+    console.log('[sendMessage] Messages:', JSON.stringify(messages));
+    
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        messages, 
+        mood: currentMood, 
+        mode: currentMode, 
+        age: currentAge, 
+        emotion: userEmotion,
+        liamMode: true  
+      }),
+    });
+    
+    console.log('[sendMessage] Response Status:', res.status);
+    console.log('[sendMessage] Response OK:', res.ok);
+    
+    const text = await res.text();
+    console.log('[sendMessage] Raw Server-Antwort:', text);
+    
+    let data;
+    try { 
+      data = JSON.parse(text); 
+      console.log('[sendMessage] Geparste Daten:', data);
+    }
+    catch (e) { 
+      console.error('[sendMessage] JSON Parse Fehler:', e.message);
+      console.error('[sendMessage] Text war:', text);
+      throw new Error('Server-Antwort ist kein gültiges JSON: ' + text.substring(0, 100)); 
+    }
+    
+    if (!res.ok) {
+      const errorMsg = data.error || data.message || 'Server-Fehler ' + res.status;
+      console.error('[sendMessage] Server-Fehler:', errorMsg);
+      throw new Error(errorMsg);
+    }
 
-    const reply = data.reply || 'Hmm, mir fällt gerade nichts ein!';
-    console.log('[sendMessage] Liams Antwort:', reply);
-    
-    // Validiere auf genderneutrale Sprache vor Sprachausgabe
-    validateGenderNeutralLanguage(reply);
-    
-    messages.push({ role: 'assistant', content: reply });
-    setBubble(reply);
-    lastRobiText = reply;
-    setHint('Drück das Mikro und sprich!');
-    
-    // LIAM: Nutze optimierte Sprachausgabe
-    await speakLiam(reply);
-    awardStar();
+    const reply = data.reply || 'Hmm, mir fällt gerade nichts ein!';
+    console.log('[sendMessage] Liams Antwort:', reply);
+    
+    validateGenderNeutralLanguage(reply);
+    
+    messages.push({ role: 'assistant', content: reply });
+    setBubble(reply);
+    lastRobiText = reply;
+    setHint('Drück das Mikro und sprich!');
+    
+    await speakLiam(reply);
+    awardStar();
 
-  } catch (err) {
-    console.error('[sendMessage] Fehler abgefangen:', err.message);
-    const errorDisplay = 'Hoppla! ' + (err.message || 'Etwas ist schiefgelaufen.');
-    setBubble(errorDisplay);
-    setHint('Probier es nochmal!');
-    if (messages.length > 0) messages.pop();
-    setRobiEmotion('normal');
-  } finally {
-    document.getElementById('micBtn').disabled = false;
-  }
-}
-// Optimierte Sprachausgabe mit Liams Persönlichkeit (ElevenLabs API)
-// ════════════════════════════════════════
-// PREMIUM KI-STIMME (ElevenLabs)
-// ════════════════════════════════════════
-/* =========================================
-   SCENE & MAIN WRAPPER
-   ========================================= */
-.scene {
-  position: relative;
-  width: min(380px, 88vw);
-  height: 100%;
-  max-height: 60vh;
-  margin: 0 auto; /* Zentriert die Haupt-Szene */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* =========================================
-   HALO & MOOD STATES
-   ========================================= */
-.halo {
-  position: absolute;
-  top: 38%;
-  left: 50%;
-  width: 100%;
-  height: 80%;
-  transform: translate(-50%, -50%);
-  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 40%, transparent 70%);
-  pointer-events: none;
-  z-index: 1;
-  border-radius: 50%;
-  animation: haloPulse 4s ease-in-out infinite;
-}
-
-.halo.happy   { background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.1) 40%, transparent 70%); }
-.halo.sad     { background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1) 40%, transparent 70%); }
-.halo.angry   { background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1) 40%, transparent 70%); }
-.halo.scared  { background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1) 40%, transparent 70%); }
-.halo.tired   { background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05) 40%, transparent 70%); }
-.halo.excited { background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.15) 40%, transparent 70%); }
-
-/* =========================================
-   PLATFORM
-   ========================================= */
-.platform {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 120%;
-  pointer-events: none;
-  z-index: 2;
-  filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.3));
-}
-
-.platform img { 
-  display: block; 
-  width: 100%; 
-  height: auto; 
-  object-fit: contain; /* Verhindert das Quetschen der Plattform */
-}
-
-/* =========================================
-   ROBOT & STATES
-   ========================================= */
-.robot-wrap {
-  position: absolute;
-  top: 40%; /* Perfekt über der Plattform */
-  left: 50%; /* Perfekt in der Mitte */
-  transform: translate(-50%, -50%); /* Zwingt Robi exakt in die Mitte */
-  width: 86%;
-  z-index: 3;
-  animation: robiFloat 3.6s ease-in-out infinite;
-  filter: drop-shadow(0 10px 30px rgba(0,0,0,0.3));
-  will-change: transform;
-}
-
-.robot-wrap img { 
-  display: block; 
-  width: 100%; 
-  height: auto; 
-  object-fit: contain; /* Verhindert das Quetschen von Robi */
-}
-
-/* Mood / state animations */
-.robot-wrap.talking   { animation: robiTalk   1.1s ease-in-out infinite; }
-.robot-wrap.listening { animation: robiListen 2.5s ease-in-out infinite; }
-.robot-wrap.excited   { animation: robiJoy    1.6s ease-in-out infinite; }
-.robot-wrap.sad       { animation: robiSad    3.0s ease-in-out infinite; }
-.robot-wrap.tired     { animation: robiTired  4.0s ease-in-out infinite; }
-
-/* =========================================
-   SPEECH BUBBLE (GLASSMORPHISM)
-   ========================================= */
-.speech-bubble {
-  position: relative;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  color: #1a3050;
-  padding: 12px 18px;
-  border-radius: 24px;
-  font-size: clamp(14px, 3.8vw, 17px);
-  font-weight: 800;
-  z-index: 5;
-  text-align: center;
-  max-width: min(440px, 92vw);
-  width: calc(100% - 32px);
-  margin: 0 16px;
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  line-height: 1.4;
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.speech-bubble::before {
-  content: '';
-  position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-bottom: 14px solid rgba(255, 255, 255, 0.8);
-}
-
-.speech-bubble::after {
-  content: '';
-  position: absolute;
-  top: -11px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-bottom: 11px solid white;
-  z-index: 1;
-}
-
-/* Typings Dots */
-.dots span {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  background: #00aadd;
-  border-radius: 50%;
-  margin: 0 2px;
-  animation: dotPulse 1.4s ease-in-out infinite;
-}
-
-.dots span:nth-child(2) { animation-delay: 0.2s; }
-.dots span:nth-child(3) { animation-delay: 0.4s; }
-
-/* =========================================
-   SPARKLES
-   ========================================= */
-.sparkle { 
-  position: absolute; 
-  width: 8px; 
-  height: 8px; 
-  pointer-events: none; 
-  z-index: 4; 
-}
-
-.sparkle::before {
-  content: '✨';
-  font-size: 16px;
-  display: block;
-  filter: drop-shadow(0 0 8px rgba(255, 220, 100, 0.9));
-}
-
-.sp1 { top: 25%; left: 8%;  animation: sparkFloat 3.2s ease-in-out infinite; }
-.sp2 { top: 30%; right: 8%; animation: sparkFloat 3.8s ease-in-out infinite 0.7s; }
-.sp3 { top: 60%; left: 10%; animation: sparkFloat 4.2s ease-in-out infinite 1.4s; }
-.sp4 { top: 65%; right: 12%; animation: sparkFloat 3.5s ease-in-out infinite 2.1s; }
-
-/* =========================================
-   MOOD BUTTONS (UI)
-   ========================================= */
-.mood-side {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 5;
-}
-
-.mood-pill {
-  background: rgba(255, 255, 255, 0.9);
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  font-size: 18px;
-  cursor: pointer;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-.mood-pill:active { 
-  transform: translateY(2px); 
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1); 
-}
-
-.mood-pill.selected {
-  background: #fddb69;
-  border-color: white;
-  transform: scale(1.15);
-  box-shadow: 0 0 14px rgba(253, 219, 105, 0.9);
-}
-
-/* =========================================
-   KEYFRAMES
-   ========================================= */
-@keyframes platform-glow {
-  0%, 100% { filter: drop-shadow(0 0 50px rgba(0, 220, 255, 0.8)) drop-shadow(0 0 80px rgba(0, 150, 255, 0.5)); }
-  50% { filter: drop-shadow(0 0 70px rgba(0, 220, 255, 1)) drop-shadow(0 0 100px rgba(0, 150, 255, 0.7)); }
-}
-
-@keyframes robiFloat {
-  /* HIER WAR DER FEHLER: translate(-50%, -50%) muss bleiben! */
-  0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
-  50%      { transform: translate(-50%, -50%) translateY(-18px); }
-}
-
-@keyframes dotPulse {
-  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-  40%           { opacity: 1;   transform: scale(1.2); }
-}
-
-@keyframes sparkFloat {
-  0%, 100% { opacity: 0; transform: translateY(0) rotate(0deg) scale(0.5); }
-  20%, 80% { opacity: 1; }
-  50%      { transform: translateY(-30px) rotate(180deg) scale(1.2); }
+  } catch (err) {
+    console.error('[sendMessage] Fehler abgefangen:', err.message);
+    const errorDisplay = 'Hoppla! ' + (err.message || 'Etwas ist schiefgelaufen.');
+    setBubble(errorDisplay);
+    setHint('Probier es nochmal!');
+    if (messages.length > 0) messages.pop();
+    setRobiEmotion('normal');
+  } finally {
+    if(micBtn) micBtn.disabled = false;
+  }
 }
 
 // ════════════════════════════════════════
 // KARAOKE
 // ════════════════════════════════════════
 function renderSongList() {
-  const list = document.getElementById('songList');
-  list.innerHTML = '';
-  const songs = ALL_SONGS.filter(s => !currentAge || s.ages.includes(currentAge));
-  songs.forEach((song) => {
-    const btn = document.createElement('button');
-    btn.className = 'song-btn';
-    btn.innerHTML = '<span class="song-icon">' + song.icon + '</span><span>' + song.title + '</span>';
-    btn.onclick = () => playSong(song);
-    list.appendChild(btn);
-  });
+  const list = document.getElementById('songList');
+  if(!list) return;
+  list.innerHTML = '';
+  const songs = ALL_SONGS.filter(s => !currentAge || s.ages.includes(currentAge));
+  songs.forEach((song) => {
+    const btn = document.createElement('button');
+    btn.className = 'song-btn';
+    btn.innerHTML = '<span class="song-icon">' + song.icon + '</span><span>' + song.title + '</span>';
+    btn.onclick = () => playSong(song);
+    list.appendChild(btn);
+  });
 }
 
 function playSong(song) {
-  if (!song || !synth) return;
-  isKaraoke = true;
-  document.getElementById('stopSongBtn').style.display = 'inline-flex';
-  document.getElementById('songList').style.opacity = '0.5';
-  let lineIdx = 0;
-  function speakNext() {
-    if (!isKaraoke || lineIdx >= song.lyrics.length) { stopKaraoke(); return; }
-    const utter = new SpeechSynthesisUtterance(song.lyrics[lineIdx]);
-    if (selectedVoice) utter.voice = selectedVoice;
-    utter.lang = 'de-DE';
-    utter.rate = 0.9;
-    utter.pitch = 1.0;
-    utter.onend = () => { lineIdx++; setTimeout(speakNext, 400); };
-    utter.onerror = () => stopKaraoke();
-    synth.speak(utter);
-  }
-  synth.cancel();
-  setTimeout(speakNext, 200);
+  if (!song || !synth) return;
+  isKaraoke = true;
+  document.getElementById('stopSongBtn').style.display = 'inline-flex';
+  document.getElementById('songList').style.opacity = '0.5';
+  let lineIdx = 0;
+  function speakNext() {
+    if (!isKaraoke || lineIdx >= song.lyrics.length) { stopKaraoke(); return; }
+    const utter = new SpeechSynthesisUtterance(song.lyrics[lineIdx]);
+    if (selectedVoice) utter.voice = selectedVoice;
+    utter.lang = 'de-DE';
+    utter.rate = 0.9;
+    utter.pitch = 1.0;
+    utter.onend = () => { lineIdx++; setTimeout(speakNext, 400); };
+    utter.onerror = () => stopKaraoke();
+    synth.speak(utter);
+  }
+  synth.cancel();
+  setTimeout(speakNext, 200);
 }
 
 function stopKaraoke() {
-  isKaraoke = false;
-  if (synth) synth.cancel();
-  document.getElementById('stopSongBtn').style.display = 'none';
-  document.getElementById('songList').style.opacity = '1';
+  isKaraoke = false;
+  if (synth) synth.cancel();
+  const stopBtn = document.getElementById('stopSongBtn');
+  const sList = document.getElementById('songList');
+  if(stopBtn) stopBtn.style.display = 'none';
+  if(sList) sList.style.opacity = '1';
 }
 
 // ════════════════════════════════════════
 // PARENT PIN
 // ════════════════════════════════════════
 function openSettings() {
-  document.getElementById('panelPin').classList.add('show');
-  document.getElementById('pinInput').value = '';
-  setTimeout(() => document.getElementById('pinInput').focus(), 100);
+  document.getElementById('panelPin').classList.add('show');
+  document.getElementById('pinInput').value = '';
+  setTimeout(() => document.getElementById('pinInput').focus(), 100);
 }
 function closePinPanel() { document.getElementById('panelPin').classList.remove('show'); }
 function checkPin() {
-  const entered = document.getElementById('pinInput').value;
-  if (entered === parentPin) { closePinPanel(); openSettingsPanel(); }
-  else { alert('❌ Falsche PIN.'); document.getElementById('pinInput').value = ''; }
+  const entered = document.getElementById('pinInput').value;
+  if (entered === parentPin) { closePinPanel(); openSettingsPanel(); }
+  else { alert('❌ Falsche PIN.'); document.getElementById('pinInput').value = ''; }
 }
-document.getElementById('pinInput').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') checkPin();
-});
+const pinInputEl = document.getElementById('pinInput');
+if(pinInputEl) {
+  pinInputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') checkPin();
+  });
+}
 
 function openSettingsPanel() {
-  renderLockToggles();
-  document.getElementById('rateSlider').value = speechRate;
-  document.getElementById('rateVal').textContent = speechRate.toFixed(2);
-  document.getElementById('pitchSlider').value = speechPitch;
-  document.getElementById('pitchVal').textContent = speechPitch.toFixed(2);
-  document.getElementById('panelSettings').classList.add('show');
+  renderLockToggles();
+  const rs = document.getElementById('rateSlider');
+  const rv = document.getElementById('rateVal');
+  const ps = document.getElementById('pitchSlider');
+  const pv = document.getElementById('pitchVal');
+  if(rs) { rs.value = speechRate; if(rv) rv.textContent = speechRate.toFixed(2); }
+  if(ps) { ps.value = speechPitch; if(pv) pv.textContent = speechPitch.toFixed(2); }
+  document.getElementById('panelSettings').classList.add('show');
 }
 function closeSettings() {
-  document.getElementById('panelSettings').classList.remove('show');
-  renderLessonCards();
+  document.getElementById('panelSettings').classList.remove('show');
+  renderLessonCards();
 }
 
 function renderLockToggles() {
-  const container = document.getElementById('lockToggles');
-  container.innerHTML = '';
-  const allModes = { ...MODES, karaoke: { icon: '🎤', title: 'Karaoke' } };
-  Object.entries(allModes).forEach(([key, m]) => {
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex; align-items:center; gap:10px; padding:5px 0;';
-    const checked = parentLocks[key] ? 'checked' : '';
-    div.innerHTML = '<input type="checkbox" id="lock-' + key + '" ' + checked + ' onchange="toggleLock(\'' + key + '\')" style="width:18px; height:18px; cursor:pointer;">' +
-                    '<label for="lock-' + key + '" style="margin:0; font-weight:normal; cursor:pointer;">' +
-                    m.icon + ' ' + m.title + ' sperren</label>';
-    container.appendChild(div);
-  });
+  const container = document.getElementById('lockToggles');
+  if(!container) return;
+  container.innerHTML = '';
+  const allModes = { ...MODES, karaoke: { icon: '🎤', title: 'Karaoke' } };
+  Object.entries(allModes).forEach(([key, m]) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex; align-items:center; gap:10px; padding:5px 0;';
+    const checked = parentLocks[key] ? 'checked' : '';
+    div.innerHTML = '<input type="checkbox" id="lock-' + key + '" ' + checked + ' onchange="toggleLock(\'' + key + '\')" style="width:18px; height:18px; cursor:pointer;">' +
+                    '<label for="lock-' + key + '" style="margin:0; font-weight:normal; cursor:pointer;">' +
+                    m.icon + ' ' + m.title + ' sperren</label>';
+    container.appendChild(div);
+  });
 }
 
 function toggleLock(mode) {
-  parentLocks[mode] = !parentLocks[mode];
-  localStorage.setItem('robi_locks', JSON.stringify(parentLocks));
+  parentLocks[mode] = !parentLocks[mode];
+  localStorage.setItem('robi_locks', JSON.stringify(parentLocks));
 }
 
 function changePin() {
-  const newPin = document.getElementById('newPinInput').value;
-  if (!/^\d{4,6}$/.test(newPin)) { alert('PIN muss 4-6 Ziffern haben.'); return; }
-  parentPin = newPin;
-  localStorage.setItem('robi_pin', newPin);
-  document.getElementById('newPinInput').value = '';
-  alert('✓ PIN wurde geändert.');
+  const newPin = document.getElementById('newPinInput').value;
+  if (!/^\d{4,6}$/.test(newPin)) { alert('PIN muss 4-6 Ziffern haben.'); return; }
+  parentPin = newPin;
+  localStorage.setItem('robi_pin', newPin);
+  document.getElementById('newPinInput').value = '';
+  alert('✓ PIN wurde geändert.');
 }
-
 
 // ════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════
 const savedAge = localStorage.getItem('robi_age');
 if (savedAge && AGE_GROUPS[savedAge]) {
-  currentAge = savedAge;
-  speechRate = AGE_GROUPS[savedAge].rate;
-  speechPitch = AGE_GROUPS[savedAge].pitch;
-  showScreen('main');
-  // Show UI immediately — speak on first tap (browser audio policy)
-  initMain();
+  currentAge = savedAge;
+  speechRate = AGE_GROUPS[savedAge].rate;
+  speechPitch = AGE_GROUPS[savedAge].pitch;
+  showScreen('main');
+  initMain();
 }
 
 // ════════════════════════════════════════
 // PWA — Service Worker Registration
 // ════════════════════════════════════════
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('Robi SW registered'))
-      .catch(err => console.log('SW error:', err));
-  });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('Robi SW registered'))
+      .catch(err => console.log('SW error:', err));
+  });
 }
 
 // ════════════════════════════════════════
-// GLOBALER ERROR HANDLER - Fehler abfangen
+// GLOBALER ERROR HANDLER
 // ════════════════════════════════════════
 window.onerror = function(msg, url, lineNo, columnNo, error) {
   console.error('[Global Error]', msg);
-  return false; // Don't suppress error
+  return false; 
 };
 
 window.addEventListener('unhandledrejection', event => {
@@ -2613,5 +2067,3 @@ window.addEventListener('unhandledrejection', event => {
 });
 
 </script>
-</body>
-</html>
