@@ -1095,31 +1095,18 @@ let currentAge = null;
 let isKaraoke = false;
 let lastRobiText = '';
 let starCount = parseInt(localStorage.getItem('robi_stars') || '0');
-let isListening = false;
-
-// Spracheingabe (Mikrofon) Setup
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const SR = SpeechRecognition ? new SpeechRecognition() : null;
-let recognition = null;
-if (SR) {
-  recognition = SR;
-  recognition.lang = 'de-DE';
-  recognition.interimResults = false;
-  recognition.onresult = (e) => { sendMessage(e.results[0][0].transcript); };
-  recognition.onend = () => stopListening();
-  recognition.onerror = () => stopListening();
-}
+let childName = localStorage.getItem('robi_name') || ''; // NEU: DSGVO-Name
 
 const AGE_GROUPS = {
   // 🎯 JETZT NATÜRLICH, JUNG & GENDERNEUTRAL — Kein piepsiger Comic-Sound mehr!
   '1-3':  { label: '🍼 1-3 Jahre',  rate: 0.98, pitch: 1.15,
-             greeting: 'Hallo mein Schatz! Ich bin Robi! Schön, dass du da bist!' },
+             greeting: 'Hallo {name}! Ich bin Robi! Schön, dass du da bist!' },
   '4-6':  { label: '🎈 4-6 Jahre',  rate: 0.98, pitch: 1.15,
-             greeting: 'Hallo! Ich bin Robi, dein Freund! Was machen wir heute?' },
+             greeting: 'Hallo {name}! Ich bin Robi, dein Freund! Was machen wir heute?' },
   '7-9':  { label: '🎒 7-9 Jahre',  rate: 1.02, pitch: 1.15,
-             greeting: 'Hi! Ich bin Robi! Worauf hast du heute Lust?' },
+             greeting: 'Hi {name}! Ich bin Robi! Worauf hast du heute Lust?' },
   '10-12':{ label: '🎮 10-12 Jahre', rate: 1.05, pitch: 1.15,
-             greeting: 'Hey! Ich bin Robi. Was wollen wir heute machen?' },
+             greeting: 'Hey {name}! Ich bin Robi. Was wollen wir heute machen?' },
 };
 
 // Modes — like Buddy.ai's "lessons" / "categories"
@@ -1127,10 +1114,10 @@ const MODES = {
   talk: {
     icon: '💬', title: 'Chat',
     welcome: {
-      '1-3':  'Hallo Schatz! Du kannst mit mir reden.',
-      '4-6':  'Hallo! Frag mich was du willst!',
-      '7-9':  'Hi! Frag mich was du willst!',
-      '10-12':'Hey! Frag mich alles!',
+      '1-3':  'Hallo {name}! Du kannst mit mir reden.',
+      '4-6':  'Hallo {name}! Frag mich was du willst!',
+      '7-9':  'Hi {name}! Frag mich was du willst!',
+      '10-12':'Hey {name}! Frag mich alles!',
     },
   },
   homework: {
@@ -1237,7 +1224,28 @@ let parentLocks = JSON.parse(localStorage.getItem('robi_locks') || '{}');
 let parentPin = localStorage.getItem('robi_pin') || '1234';
 
 // ════════════════════════════════════════
-// AGE SELECTION (Repariert für sofortigen Wechsel)
+// DSGVO PARENT GATE LOGIK (NEU)
+// ════════════════════════════════════════
+function checkParentMath() {
+  const val = document.getElementById('mathAnswer').value;
+  if (val == 12) {
+    document.getElementById('mathChallenge').style.display = 'none';
+    document.getElementById('setupForm').style.display = 'block';
+  } else {
+    alert('Falsche Antwort. Das war wohl ein Tippfehler!');
+  }
+}
+
+function saveSetup() {
+  const name = document.getElementById('childNameInput').value.trim();
+  if (!name) { alert('Bitte gib einen Namen oder Spitznamen ein.'); return; }
+  childName = name;
+  localStorage.setItem('robi_name', childName);
+  showScreen('age');
+}
+
+// ════════════════════════════════════════
+// AGE SELECTION
 // ════════════════════════════════════════
 function selectAge(age) {
   currentAge = age;
@@ -1246,11 +1254,12 @@ function selectAge(age) {
   speechRate = grp.rate;
   speechPitch = grp.pitch;
 
-  showAgeBubble(grp.greeting);
+  const greeting = grp.greeting.replace('{name}', childName);
+  showAgeBubble(greeting);
 
-  // SOFORTIGER WECHSEL: Keine Verzögerung mehr durch alte Browser-Stimmen!
+  // SOFORTIGER WECHSEL ZU MAIN!
   showScreen('main');
-  initMain(grp.greeting);
+  initMain(greeting);
 }
 
 function goToAgeSelect() {
@@ -1261,14 +1270,12 @@ function goToAgeSelect() {
 
 function showAgeBubble(text) {
   const bubble = document.getElementById('ageBubble');
-  if(!bubble) return;
   bubble.textContent = text;
   bubble.classList.add('show');
   clearTimeout(showAgeBubble._t);
   showAgeBubble._t = setTimeout(() => bubble.classList.remove('show'), 4500);
 }
 
-// Die alte speakOnAge Funktion bleibt im Code, falls HTML-Teile sie noch brauchen, wird aber beim Altersklick nicht mehr genutzt.
 function speakOnAge(text, onDone) {
   let isDone = false;
   function finishCallback() {
@@ -1283,10 +1290,11 @@ function speakOnAge(text, onDone) {
   }
 
   synth.cancel();
-  const r = document.getElementById('robot');
+  const r = document.getElementById('robot'); 
   if (r) r.classList.add('talking');
 
   const cleanText = String(text).replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+
   const utter = new SpeechSynthesisUtterance(cleanText);
   
   const voice = availableVoices.find(v => 
@@ -1327,12 +1335,11 @@ function initMain(customText = null) {
     return;
   }
   
-  // CustomText (Altersbegrüßung) oder Standard-Willkommen laden
-  const welcome = customText ? customText : (m.welcome[currentAge] || m.welcome['7-9']);
+  const defaultWelcome = m.welcome[currentAge] || m.welcome['7-9'];
+  const welcome = (customText ? customText : defaultWelcome).replace('{name}', childName);
+  
   setBubble(welcome);
   lastRobiText = welcome;
-  
-  // Nutzt jetzt unsere neue ElevenLabs Methode!
   setTimeout(() => speakLiam(welcome), 200);
 }
 
@@ -1371,12 +1378,12 @@ function switchMode(mode) {
   currentMode = mode;
   messages = [];
   const m = MODES[mode];
-  const welcome = m.welcome[currentAge] || m.welcome['7-9'];
+  const welcome = (m.welcome[currentAge] || m.welcome['7-9']).replace('{name}', childName);
 
   renderLessonCards();
   setBubble(welcome);
   lastRobiText = welcome;
-  speakLiam(welcome); // Nutzt jetzt ElevenLabs
+  speakLiam(welcome);
 
   document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
   const activeBtn = document.getElementById('m-' + mode);
@@ -1549,7 +1556,7 @@ function reactToMood(mood) {
 }
 
 // ════════════════════════════════════════
-// VOICE / TTS (Veraltete Browser-Auswahl bleibt sicherheitshalber)
+// VOICE / TTS
 // ════════════════════════════════════════
 const synth = window.speechSynthesis;
 let voices = [];
@@ -1562,7 +1569,6 @@ function loadVoices() {
   const allVoices = synth.getVoices();
   voices = allVoices.filter(v => v.lang.toLowerCase().startsWith('de'));
   const sel = document.getElementById('voiceSel');
-  if(!sel) return; // Falls es im HTML fehlt
   sel.innerHTML = '';
   if (voices.length === 0) {
     const opt = document.createElement('option');
@@ -1575,8 +1581,24 @@ function loadVoices() {
   
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   const preferredNames = isMobile
-    ? ['Google Deutsch', 'Microsoft Katja', 'Anna', 'Hanna', 'Microsoft Hanna', 'Microsoft Clara', 'Microsoft Zira', 'Hedda']
-    : ['Microsoft Katja', 'Anna', 'Google Deutsch', 'Microsoft Clara', 'Hanna', 'Microsoft Hanna', 'Microsoft Zira', 'Hedda'];
+    ? [
+        'Google Deutsch',
+        'Microsoft Katja',
+        'Anna',
+        'Hanna', 'Microsoft Hanna',
+        'Microsoft Clara',
+        'Microsoft Zira',
+        'Hedda',
+      ]
+    : [
+        'Microsoft Katja',
+        'Anna',
+        'Google Deutsch',
+        'Microsoft Clara',
+        'Hanna', 'Microsoft Hanna',
+        'Microsoft Zira',
+        'Hedda',
+      ];
   
   let bestIdx = 0;
   voices.forEach((v, i) => {
@@ -1591,6 +1613,7 @@ function loadVoices() {
   if (!isNaN(savedIdx) && voices[savedIdx]) bestIdx = savedIdx;
   sel.selectedIndex = bestIdx;
   selectedVoice = voices[bestIdx];
+  console.log('[loadVoices] Stimme:', selectedVoice?.name);
 }
 
 if (synth) {
@@ -1608,35 +1631,27 @@ if (synth) {
 }
 
 function onVoiceChange() {
-  const sel = document.getElementById('voiceSel');
-  if(!sel) return;
-  const idx = parseInt(sel.value);
+  const idx = parseInt(document.getElementById('voiceSel').value);
   if (!isNaN(idx) && voices[idx]) { selectedVoice = voices[idx]; localStorage.setItem('robi_voice_idx', idx); }
 }
 function onRateChange() {
-  const slider = document.getElementById('rateSlider');
-  if(!slider) return;
-  speechRate = parseFloat(slider.value);
+  speechRate = parseFloat(document.getElementById('rateSlider').value);
   document.getElementById('rateVal').textContent = speechRate.toFixed(2);
 }
 function onPitchChange() {
-  const slider = document.getElementById('pitchSlider');
-  if(!slider) return;
-  speechPitch = parseFloat(slider.value);
+  speechPitch = parseFloat(document.getElementById('pitchSlider').value);
   document.getElementById('pitchVal').textContent = speechPitch.toFixed(2);
 }
 function testVoice() { speakLiam('Hallo! Ich bin Robi, dein Roboter-Freund!'); }
 
-let availableVoices = [];
-if(window.speechSynthesis) {
-  window.speechSynthesis.onvoiceschanged = () => {
-    availableVoices = window.speechSynthesis.getVoices();
-  };
-}
 
-// Die alte Browser-Speak Funktion bleibt erhalten
+let availableVoices = [];
+window.speechSynthesis.onvoiceschanged = () => {
+  availableVoices = window.speechSynthesis.getVoices();
+};
+
 function speak(text) {
-  fallbackSpeak(text);
+  fallbackSpeak(text); // Fallback für alte Befehle
 }
 
 function toggleListen() {
@@ -1695,12 +1710,9 @@ function sendText() {
     sendMessage(val);
   }
 }
-const textInputEl = document.getElementById('textInput');
-if(textInputEl) {
-  textInputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendText();
-  });
-}
+document.getElementById('textInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendText();
+});
 
 // ════════════════════════════════════════
 // LIAM INTEGRATION - TTS & VOICE OPTIMIZATION
@@ -1748,7 +1760,7 @@ function parseForSpeech(text) {
 }
 
 // ════════════════════════════════════════
-// ELEVENLABS - PREMIUM KI-STIMME
+// PREMIUM KI-STIMME (ELEVENLABS)
 // ════════════════════════════════════════
 async function speakLiam(text) {
   if (!text || !text.trim()) return;
@@ -1773,16 +1785,13 @@ async function speakLiam(text) {
       },
       body: JSON.stringify({
         text: text,
-        model_id: 'eleven_multilingual_v2',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75
-        }
+        model_id: 'eleven_multilingual_v2', 
+        voice_settings: { stability: 0.5, similarity_boost: 0.75 }
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Server antwortet mit Fehler: ${response.status}`);
+      throw new Error(`ElevenLabs Error: ${response.status}`);
     }
 
     const audioBlob = await response.blob();
@@ -1803,6 +1812,7 @@ async function speakLiam(text) {
   }
 }
 
+// Unser Sicherheits-Netz
 function fallbackSpeak(text) {
   if (!('speechSynthesis' in window)) {
     const robot = document.getElementById('robot');
@@ -1902,8 +1912,7 @@ async function sendMessage(userText) {
   messages.push({ role: 'user', content: userText });
   if (messages.length > MAX_HISTORY) messages = messages.slice(-MAX_HISTORY);
 
-  const micBtn = document.getElementById('micBtn');
-  if(micBtn) micBtn.disabled = true;
+  document.getElementById('micBtn').disabled = true;
 
   try {
     console.log('[sendMessage] Sende Nachricht an /api/chat:', userText);
@@ -1919,6 +1928,7 @@ async function sendMessage(userText) {
         mode: currentMode, 
         age: currentAge, 
         emotion: userEmotion,
+        childName: childName, // 💡 DSGVO: Name wird an die API übertragen
         liamMode: true  
       }),
     });
@@ -1949,7 +1959,9 @@ async function sendMessage(userText) {
     const reply = data.reply || 'Hmm, mir fällt gerade nichts ein!';
     console.log('[sendMessage] Liams Antwort:', reply);
     
-    validateGenderNeutralLanguage(reply);
+    if (typeof validateGenderNeutralLanguage === 'function') {
+      validateGenderNeutralLanguage(reply);
+    }
     
     messages.push({ role: 'assistant', content: reply });
     setBubble(reply);
@@ -1957,7 +1969,9 @@ async function sendMessage(userText) {
     setHint('Drück das Mikro und sprich!');
     
     await speakLiam(reply);
-    awardStar();
+    if (typeof awardStar === 'function') {
+      awardStar();
+    }
 
   } catch (err) {
     console.error('[sendMessage] Fehler abgefangen:', err.message);
@@ -1967,7 +1981,7 @@ async function sendMessage(userText) {
     if (messages.length > 0) messages.pop();
     setRobiEmotion('normal');
   } finally {
-    if(micBtn) micBtn.disabled = false;
+    document.getElementById('micBtn').disabled = false;
   }
 }
 
@@ -1976,7 +1990,6 @@ async function sendMessage(userText) {
 // ════════════════════════════════════════
 function renderSongList() {
   const list = document.getElementById('songList');
-  if(!list) return;
   list.innerHTML = '';
   const songs = ALL_SONGS.filter(s => !currentAge || s.ages.includes(currentAge));
   songs.forEach((song) => {
@@ -2012,10 +2025,8 @@ function playSong(song) {
 function stopKaraoke() {
   isKaraoke = false;
   if (synth) synth.cancel();
-  const stopBtn = document.getElementById('stopSongBtn');
-  const sList = document.getElementById('songList');
-  if(stopBtn) stopBtn.style.display = 'none';
-  if(sList) sList.style.opacity = '1';
+  document.getElementById('stopSongBtn').style.display = 'none';
+  document.getElementById('songList').style.opacity = '1';
 }
 
 // ════════════════════════════════════════
@@ -2032,21 +2043,16 @@ function checkPin() {
   if (entered === parentPin) { closePinPanel(); openSettingsPanel(); }
   else { alert('❌ Falsche PIN.'); document.getElementById('pinInput').value = ''; }
 }
-const pinInputEl = document.getElementById('pinInput');
-if(pinInputEl) {
-  pinInputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') checkPin();
-  });
-}
+document.getElementById('pinInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') checkPin();
+});
 
 function openSettingsPanel() {
   renderLockToggles();
-  const rs = document.getElementById('rateSlider');
-  const rv = document.getElementById('rateVal');
-  const ps = document.getElementById('pitchSlider');
-  const pv = document.getElementById('pitchVal');
-  if(rs) { rs.value = speechRate; if(rv) rv.textContent = speechRate.toFixed(2); }
-  if(ps) { ps.value = speechPitch; if(pv) pv.textContent = speechPitch.toFixed(2); }
+  document.getElementById('rateSlider').value = speechRate;
+  document.getElementById('rateVal').textContent = speechRate.toFixed(2);
+  document.getElementById('pitchSlider').value = speechPitch;
+  document.getElementById('pitchVal').textContent = speechPitch.toFixed(2);
   document.getElementById('panelSettings').classList.add('show');
 }
 function closeSettings() {
@@ -2056,7 +2062,6 @@ function closeSettings() {
 
 function renderLockToggles() {
   const container = document.getElementById('lockToggles');
-  if(!container) return;
   container.innerHTML = '';
   const allModes = { ...MODES, karaoke: { icon: '🎤', title: 'Karaoke' } };
   Object.entries(allModes).forEach(([key, m]) => {
@@ -2084,16 +2089,27 @@ function changePin() {
   alert('✓ PIN wurde geändert.');
 }
 
+
 // ════════════════════════════════════════
-// INIT
+// INIT (Angepasst für DSGVO / Parent Gate)
 // ════════════════════════════════════════
 const savedAge = localStorage.getItem('robi_age');
-if (savedAge && AGE_GROUPS[savedAge]) {
+const savedName = localStorage.getItem('robi_name');
+
+// 💡 Die neue Start-Logik:
+if (!savedName) {
+  // Wenn kein Name da ist, zeige den DSGVO / Eltern-Bereich!
+  showScreen('parent-gate');
+} else if (savedAge && AGE_GROUPS[savedAge]) {
+  // Wenn Name UND Alter da sind, ab in den Chat!
   currentAge = savedAge;
   speechRate = AGE_GROUPS[savedAge].rate;
   speechPitch = AGE_GROUPS[savedAge].pitch;
   showScreen('main');
   initMain();
+} else {
+  // Wenn Name da ist, aber kein Alter, zeige die Altersauswahl!
+  showScreen('age');
 }
 
 // ════════════════════════════════════════
@@ -2108,11 +2124,11 @@ if ('serviceWorker' in navigator) {
 }
 
 // ════════════════════════════════════════
-// GLOBALER ERROR HANDLER
+// GLOBALER ERROR HANDLER - Fehler abfangen
 // ════════════════════════════════════════
 window.onerror = function(msg, url, lineNo, columnNo, error) {
   console.error('[Global Error]', msg);
-  return false; 
+  return false; // Don't suppress error
 };
 
 window.addEventListener('unhandledrejection', event => {
