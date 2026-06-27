@@ -51,11 +51,28 @@ const AGE_PROMPTS = {
 // ── /api/chat (Text-Generierung via Google Gemini) ─────────
 app.post('/api/chat', chatLimiter, async (req, res) => {
   try {
-    const { messages, age, mode } = req.body;
+    // 💡 NEU: Hier fangen wir childName und emotion ab!
+    const { messages, age, mode, childName, emotion } = req.body;
     if (!messages || messages.length === 0) return res.status(400).json({ error: 'Keine Nachrichten.' });
 
     const safeAge = ['1-3','4-6','7-9','10-12'].includes(age) ? age : '7-9';
-    const systemInstruction = `${BASE_PROMPT}\n\n${AGE_PROMPTS[safeAge]}`;
+    
+    // 💡 NEU: Fallback, falls kein Name oder keine Emotion gesendet wurde
+    const nameToUse = childName ? childName : "mein kleiner Freund";
+    const currentEmotion = emotion ? emotion : "normal";
+    const currentMode = mode ? mode : "talk";
+
+    // 💡 NEU: Wir bauen das Gedächtnis für Gemini zusammen
+    const memoryPrompt = `\nWICHTIGE INFOS ÜBER DEIN GEGENÜBER:
+- Name des Kindes: ${nameToUse}
+- Aktuelle Emotion: ${currentEmotion}
+- Aktueller Modus der App: ${currentMode}
+
+REGELN FÜR DIESE ANTWORT:
+Bitte sprich das Kind ab und zu mit seinem Namen "${nameToUse}" an, damit sich das Gespräch persönlich anfühlt. Berücksichtige außerdem, dass sich das Kind gerade "${currentEmotion}" fühlt und reagiere passend und einfühlsam darauf.`;
+
+    // Wir setzen alle Bausteine für Gemini zusammen
+    const systemInstruction = `${BASE_PROMPT}\n\n${AGE_PROMPTS[safeAge]}\n${memoryPrompt}`;
 
     const chatContents = messages.map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
