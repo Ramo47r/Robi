@@ -944,6 +944,32 @@ body {
   color: #1cb0f6;
 }
 .lesson-card.active:active { transform: translateY(6px); box-shadow: 0 0 0 #1899d6; }
+
+  /* ════════════════════════════════════════
+   ROBI & PORTAL POSITIONIERUNG
+═══════════════════════════════════════ */
+
+/* Der Container für Robi */
+.age-robot-wrap,
+#robot {
+  position: relative;
+  z-index: 10; /* Robi steht im Vordergrund */
+  
+  /* HIER IST DIE MAGIE: Wir ziehen Robi nach unten! */
+  /* Wenn die Lücke immer noch zu groß ist, mach aus -40px einfach -60px oder -80px */
+  margin-bottom: -40px; 
+  
+  /* Falls Robi im Bild selbst zu weit oben hängt, schieben wir ihn zusätzlich runter */
+  transform: translateY(20px);
+}
+
+/* Das Portal (falls es in deinem HTML 'portal' oder so heißt) */
+img[src*="portal"], 
+.portal {
+  position: relative;
+  z-index: 1; /* Das Portal ist im Hintergrund */
+  margin-top: -20px; /* Zieht das Portal Robi entgegen */
+}
 </style>
 </head>
 <body>
