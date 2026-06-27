@@ -945,30 +945,33 @@ body {
 }
 .lesson-card.active:active { transform: translateY(6px); box-shadow: 0 0 0 #1899d6; }
 
-  /* ════════════════════════════════════════
-   ROBI & PORTAL POSITIONIERUNG
+/* ════════════════════════════════════════
+   ROBI & PORTAL SCHWERKRAFT-FIX (Extrem)
 ═══════════════════════════════════════ */
 
-/* Der Container für Robi */
-.age-robot-wrap,
-#robot {
+/* 1. Wir ziehen Robi auf dem Alters-Bildschirm massiv nach unten */
+#screen-age .age-robot-wrap,
+#screen-age #robot,
+#screen-age img[src*="robi"], /* Falls das Bild 'robi' im Namen hat */
+#screen-age img {
+  margin-bottom: -120px !important; /* 💡 HIER ist der Hebel! */
   position: relative;
-  z-index: 10; /* Robi steht im Vordergrund */
-  
-  /* HIER IST DIE MAGIE: Wir ziehen Robi nach unten! */
-  /* Wenn die Lücke immer noch zu groß ist, mach aus -40px einfach -60px oder -80px */
-  margin-bottom: -40px; 
-  
-  /* Falls Robi im Bild selbst zu weit oben hängt, schieben wir ihn zusätzlich runter */
-  transform: translateY(20px);
+  z-index: 10;
 }
 
-/* Das Portal (falls es in deinem HTML 'portal' oder so heißt) */
-img[src*="portal"], 
-.portal {
+/* 2. Wir ziehen das Portal nach oben, damit es Robi entgegenkommt */
+#screen-age img[src*="portal"],
+#screen-age .portal {
+  margin-top: -80px !important; /* 💡 Portal rückt nach oben */
   position: relative;
-  z-index: 1; /* Das Portal ist im Hintergrund */
-  margin-top: -20px; /* Zieht das Portal Robi entgegen */
+  z-index: 1;
+}
+
+/* 3. Wir sorgen dafür, dass die Buttons nicht vom Portal überdeckt werden */
+#screen-age .buttons-container,
+#screen-age button {
+  position: relative;
+  z-index: 20;
 }
 </style>
 </head>
