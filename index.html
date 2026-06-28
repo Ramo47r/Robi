@@ -949,29 +949,25 @@ body {
    ROBI & PORTAL SCHWERKRAFT-FIX (Extrem)
 ═══════════════════════════════════════ */
 
-/* 1. Wir ziehen Robi auf dem Alters-Bildschirm massiv nach unten */
-#screen-age .age-robot-wrap,
-#screen-age #robot,
-#screen-age img[src*="robi"], /* Falls das Bild 'robi' im Namen hat */
-#screen-age img {
-  margin-bottom: -120px !important; /* 💡 HIER ist der Hebel! */
+/* ════════════════════════════════════════
+   ROBI & PORTAL BEWEGEN (Der sichere Weg!)
+═══════════════════════════════════════ */
+
+/* Robi bewegen (X-Achse, Y-Achse) */
+#screen-age img[src*="robi"],
+#screen-age #robot {
+  /* translate(Nach rechts, Nach unten) */
+  transform: translate(40px, 80px) !important; 
   position: relative;
   z-index: 10;
 }
 
-/* 2. Wir ziehen das Portal nach oben, damit es Robi entgegenkommt */
+/* Portal etwas nach oben ziehen */
 #screen-age img[src*="portal"],
 #screen-age .portal {
-  margin-top: -80px !important; /* 💡 Portal rückt nach oben */
+  transform: translateY(-40px) !important;
   position: relative;
   z-index: 1;
-}
-
-/* 3. Wir sorgen dafür, dass die Buttons nicht vom Portal überdeckt werden */
-#screen-age .buttons-container,
-#screen-age button {
-  position: relative;
-  z-index: 20;
 }
 
   <!-- ════════════════════════════════════════
