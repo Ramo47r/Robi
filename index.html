@@ -944,6 +944,35 @@ body {
   color: #1cb0f6;
 }
 .lesson-card.active:active { transform: translateY(6px); box-shadow: 0 0 0 #1899d6; }
+
+  /* ════════════════════════════════════════
+   ROBI & PORTAL SCHWERKRAFT-FIX (Extrem)
+═══════════════════════════════════════ */
+
+/* 1. Wir ziehen Robi auf dem Alters-Bildschirm massiv nach unten */
+#screen-age .age-robot-wrap,
+#screen-age #robot,
+#screen-age img[src*="robi"], /* Falls das Bild 'robi' im Namen hat */
+#screen-age img {
+  margin-bottom: -120px !important; /* 💡 HIER ist der Hebel! */
+  position: relative;
+  z-index: 10;
+}
+
+/* 2. Wir ziehen das Portal nach oben, damit es Robi entgegenkommt */
+#screen-age img[src*="portal"],
+#screen-age .portal {
+  margin-top: -80px !important; /* 💡 Portal rückt nach oben */
+  position: relative;
+  z-index: 1;
+}
+
+/* 3. Wir sorgen dafür, dass die Buttons nicht vom Portal überdeckt werden */
+#screen-age .buttons-container,
+#screen-age button {
+  position: relative;
+  z-index: 20;
+}
 </style>
 </head>
 <body>
