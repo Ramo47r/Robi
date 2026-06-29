@@ -1,5 +1,5 @@
 // ============================================================
-// Robi Backend — Google Gemini (Chat) & ElevenLabs (Premium Stimme)
+// Lio Backend — Google Gemini (Chat) & ElevenLabs (Premium Stimme)
 // ============================================================
 import express from 'express';
 import cors from 'cors';
@@ -36,7 +36,8 @@ const chatLimiter = rateLimit({
 });
 
 // ── Prompts ────────────────────────────────────────────────
-const BASE_PROMPT = `Du bist Robi, ein freundlicher Roboter-Freund für Kinder (Deutsch).
+// 💡 HIER HABEN WIR DEN NAMEN GEÄNDERT!
+const BASE_PROMPT = `Du bist Lio, ein freundlicher Roboter-Freund für Kinder (Deutsch).
 Persönlichkeit: warmherzig, geduldig, ermutigend, neugierig, spielerisch.
 Sicherheitsregeln: KEIN Gewalt/Sex/Drogen. Bei ernsten Themen sanft auf Eltern hinweisen.
 Stil: kein Markdown, natürlicher Text (wird vorgelesen), Folgefrage stellen.`;
@@ -51,18 +52,15 @@ const AGE_PROMPTS = {
 // ── /api/chat (Text-Generierung via Google Gemini) ─────────
 app.post('/api/chat', chatLimiter, async (req, res) => {
   try {
-    // 💡 NEU: Hier fangen wir childName und emotion ab!
     const { messages, age, mode, childName, emotion } = req.body;
     if (!messages || messages.length === 0) return res.status(400).json({ error: 'Keine Nachrichten.' });
 
     const safeAge = ['1-3','4-6','7-9','10-12'].includes(age) ? age : '7-9';
     
-    // 💡 NEU: Fallback, falls kein Name oder keine Emotion gesendet wurde
     const nameToUse = childName ? childName : "mein kleiner Freund";
     const currentEmotion = emotion ? emotion : "normal";
     const currentMode = mode ? mode : "talk";
 
-    // 💡 NEU: Wir bauen das Gedächtnis für Gemini zusammen
     const memoryPrompt = `\nWICHTIGE INFOS ÜBER DEIN GEGENÜBER:
 - Name des Kindes: ${nameToUse}
 - Aktuelle Emotion: ${currentEmotion}
@@ -71,7 +69,6 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
 REGELN FÜR DIESE ANTWORT:
 Bitte sprich das Kind ab und zu mit seinem Namen "${nameToUse}" an, damit sich das Gespräch persönlich anfühlt. Berücksichtige außerdem, dass sich das Kind gerade "${currentEmotion}" fühlt und reagiere passend und einfühlsam darauf.`;
 
-    // Wir setzen alle Bausteine für Gemini zusammen
     const systemInstruction = `${BASE_PROMPT}\n\n${AGE_PROMPTS[safeAge]}\n${memoryPrompt}`;
 
     const chatContents = messages.map(m => ({
@@ -100,7 +97,6 @@ app.post('/api/speech', async (req, res) => {
 
     const apiKey = process.env.ELEVENLABS_API_KEY; 
     
-    // HIER KANNST DU DIE STIMME ÄNDERN (Aktuell: Charlie)
     const voiceId = 'JBFqnCBsd6RMkjVDRZzb'; 
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
@@ -114,7 +110,7 @@ app.post('/api/speech', async (req, res) => {
         text: text,
         model_id: "eleven_multilingual_v2", 
         voice_settings: {
-          stability: 0.45, // Verhindert das Flüstern im Hintergrund
+          stability: 0.45, 
           similarity_boost: 0.75
         }
       })
@@ -134,12 +130,11 @@ app.post('/api/speech', async (req, res) => {
   }
 });
 
-// Fallback Route für die HTML-Datei (Muss GANZ unten stehen!)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // ── Server Start ───────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🤖 Robi Server ist wach und lauscht auf Port ${PORT}\n`);
+  console.log(`\n🤖 Lio Server ist wach und lauscht auf Port ${PORT}\n`);
 });
